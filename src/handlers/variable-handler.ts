@@ -367,12 +367,8 @@ export class VariableHandler extends EventEmitter {
 				const state = args.value as string
 				return [{ name: `wlive_${card}_marker_time`, value: state }]
 			} else if (subcommand == 'etime') {
-				const seconds = Math.floor((args.value as number) / 1000)
-				const totalSeconds = seconds.toString()
-				const totalMinutes = Math.floor(seconds / 60)
-					.toString()
-					.padStart(3, '0')
-				const remainderSeconds = (seconds % 60).toString().padStart(2, '0')
+				if (args.type !== 'f' && args.type !== 'i') return
+				const seconds = Math.floor(args.value / 1000)
 				const hours = Math.floor(seconds / 3600)
 					.toString()
 					.padStart(2, '0')
@@ -381,20 +377,21 @@ export class VariableHandler extends EventEmitter {
 					.padStart(2, '0')
 				const secondsWithinMinute = (seconds % 60).toString().padStart(2, '0')
 				return [
-					{ name: `wlive_${card}_elapsed_time_ss`, value: totalSeconds },
-					{ name: `wlive_${card}_elapsed_time_mm_ss`, value: `${totalMinutes}:${remainderSeconds}` },
+					{ name: `wlive_${card}_elapsed_time_ss`, value: seconds.toString() },
+					{
+						name: `wlive_${card}_elapsed_time_mm_ss`,
+						value: `${Math.floor(seconds / 60)
+							.toString()
+							.padStart(3, '0')}:${secondsWithinMinute}`,
+					},
 					{
 						name: `wlive_${card}_elapsed_time_hh_mm_ss`,
 						value: `${hours}:${minutesWithinHour}:${secondsWithinMinute}`,
 					},
 				]
 			} else if (subcommand == 'sessionlen') {
-				const seconds = Math.floor((args.value as number) / 1000)
-				const totalSeconds = seconds.toString()
-				const totalMinutes = Math.floor(seconds / 60)
-					.toString()
-					.padStart(3, '0')
-				const remainderSeconds = (seconds % 60).toString().padStart(2, '0')
+				if (args.type !== 'f' && args.type !== 'i') return
+				const seconds = Math.floor(args.value / 1000)
 				const hours = Math.floor(seconds / 3600)
 					.toString()
 					.padStart(2, '0')
@@ -403,20 +400,21 @@ export class VariableHandler extends EventEmitter {
 					.padStart(2, '0')
 				const secondsWithinMinute = (seconds % 60).toString().padStart(2, '0')
 				return [
-					{ name: `wlive_${card}_session_len_ss`, value: totalSeconds },
-					{ name: `wlive_${card}_session_len_mm_ss`, value: `${totalMinutes}:${remainderSeconds}` },
+					{ name: `wlive_${card}_session_len_ss`, value: seconds.toString() },
+					{
+						name: `wlive_${card}_session_len_mm_ss`,
+						value: `${Math.floor(seconds / 60)
+							.toString()
+							.padStart(3, '0')}:${secondsWithinMinute}`,
+					},
 					{
 						name: `wlive_${card}_session_len_hh_mm_ss`,
 						value: `${hours}:${minutesWithinHour}:${secondsWithinMinute}`,
 					},
 				]
 			} else if (subcommand == 'sdfree') {
-				const seconds = Math.floor((args.value as number) / 1000)
-				const totalSeconds = seconds.toString()
-				const totalMinutes = Math.floor(seconds / 60)
-					.toString()
-					.padStart(3, '0')
-				const remainderSeconds = (seconds % 60).toString().padStart(2, '0')
+				if (args.type !== 'f' && args.type !== 'i') return
+				const seconds = Math.floor(args.value / 1000)
 				const hours = Math.floor(seconds / 3600)
 					.toString()
 					.padStart(2, '0')
@@ -425,8 +423,13 @@ export class VariableHandler extends EventEmitter {
 					.padStart(2, '0')
 				const secondsWithinMinute = (seconds % 60).toString().padStart(2, '0')
 				return [
-					{ name: `wlive_${card}_sdfree_ss`, value: totalSeconds },
-					{ name: `wlive_${card}_sdfree_mm_ss`, value: `${totalMinutes}:${remainderSeconds}` },
+					{ name: `wlive_${card}_sdfree_ss`, value: seconds.toString() },
+					{
+						name: `wlive_${card}_sdfree_mm_ss`,
+						value: `${Math.floor(seconds / 60)
+							.toString()
+							.padStart(3, '0')}:${secondsWithinMinute}`,
+					},
 					{
 						name: `wlive_${card}_sdfree_hh_mm_ss`,
 						value: `${hours}:${minutesWithinHour}:${secondsWithinMinute}`,

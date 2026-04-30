@@ -103,9 +103,11 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 	private startWlivePoller(): void {
 		this.stopWlivePoller()
 		this.wlivePoller = setInterval(() => {
+			// Poll the string-typed state path. Wing's /*S push sends an integer
+			// enum index for this param, which getStringFromState can't read.
+			// Polling the full response keeps the string representation fresh.
 			for (let card = 1; card <= 2; card++) {
 				this.stateHandler?.ensureLoaded(CardsCommands.WLiveCardState(card))
-				this.stateHandler?.ensureLoaded(CardsCommands.WLiveCardETime(card))
 			}
 		}, 1000)
 	}
