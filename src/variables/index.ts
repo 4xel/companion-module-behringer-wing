@@ -3,6 +3,7 @@ import { getAuxVariables } from './auxiliary.js'
 import { getBusVariables } from './bus.js'
 import { getChannelVariables } from './channel.js'
 import { getDcaVariables } from './dca.js'
+import { getFxVariables } from './fx.js'
 import { getGpioVariables } from './gpio.js'
 import { getMainVariables } from './main.js'
 import { getMatrixVariables } from './matrix.js'
@@ -30,6 +31,7 @@ export function getAllVariables(model: ModelSpec): VariableDefinition[] {
 	variables.push(...getMatrixVariables(model))
 	variables.push(...getMainVariables(model))
 	variables.push(...getDcaVariables(model))
+	variables.push(...getFxVariables(model))
 	variables.push(...getMuteGroupVariables(model))
 	variables.push(...getUsbVariables())
 	variables.push(...getWliveVariables())

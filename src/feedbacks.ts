@@ -28,7 +28,7 @@ import { CardsCommands } from './commands/cards.js'
 import { IoCommands } from './commands/io.js'
 
 import { getCardsChoices, getCardsStatusChoices, getCardsActionChoices } from './choices/cards.js'
-import { EffectCommands } from './commands/effect.js'
+import { EffectCommands, resolveInsertOnPath } from './commands/effect.js'
 
 type CompanionFeedbackWithCallback = SetRequired<
 	CompanionBooleanFeedbackDefinition,
@@ -54,7 +54,8 @@ export enum FeedbackId {
 	MainAltSwitch = 'main-alt-switch',
 	ActiveScene = 'active-scene',
 	SofActive = 'sof-active',
-	EffectParam = 'effect-param',
+	FxMuted = 'fx-muted',
+	FxInsertOn = 'fx-insert-on',
 }
 
 function subscribeFeedback(
@@ -102,36 +103,72 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 	const mainSendDestinations = [...state.namedChoices.matrices]
 
 	const feedbacks: { [id in FeedbackId]: CompanionFeedbackWithCallback | undefined } = {
-		[FeedbackId.EffectParam]: {
-			type: 'advanced',
-			name: 'FX test',
-			description: 'fxTest',
-			options: [
-				{
-					type: 'checkbox',
-					label: 'Display State Text',
-					id: 'stateText',
-					default: false,
-				},
-			],
-			callback: (event): CompanionAdvancedFeedbackResult => {
-				const cmd = EffectCommands.Decay(3)
-				const decay = StateUtil.getStringFromState(cmd, state)
-				if (event.options.stateText) {
-					return {
-						text: `${decay ?? 'N/A'}`,
-					}
-				} else {
-					return {}
-				}
+		[FeedbackId.FxMuted]: {
+			type: 'boolean',
+			name: 'FX Slot - Mix at Zero',
+			description: 'Active when an FX slot fxmix is 0 (effect is silenced).',
+			options: [...GetDropdownWithVariables('FX Slot', 'slot', state.namedChoices.effects)],
+			defaultStyle: { bgcolor: combineRgb(255, 165, 0), color: combineRgb(0, 0, 0) },
+			callback: (event: CompanionFeedbackInfo): boolean => {
+				const slot = ActionUtil.getStringWithVariables(event, 'slot')
+				const slotNum = ActionUtil.getNodeNumberFromID(slot)
+				const cmd = EffectCommands.FxMix(slotNum)
+				const mix = StateUtil.getNumberFromState(cmd, state)
+				return typeof mix === 'number' && mix === 0
 			},
-			subscribe: (event): void => {
-				const cmd = EffectCommands.Decay(3)
+			subscribe: async (event): Promise<void> => {
+				const slot = ActionUtil.getStringWithVariables(event, 'slot')
+				const slotNum = ActionUtil.getNodeNumberFromID(slot)
+				const cmd = EffectCommands.FxMix(slotNum)
 				subscribeFeedback(ensureLoaded, subs, cmd, event)
 			},
 			unsubscribe: (event: CompanionFeedbackInfo): void => {
-				const cmd = EffectCommands.Decay(3)
+				const slot = ActionUtil.getStringWithVariables(event, 'slot')
+				const slotNum = ActionUtil.getNodeNumberFromID(slot)
+				const cmd = EffectCommands.FxMix(slotNum)
 				unsubscribeFeedback(subs, cmd, event)
+			},
+		},
+		[FeedbackId.FxInsertOn]: {
+			type: 'boolean',
+			name: 'FX Slot - Insert On',
+			description:
+				'Active when the insert of an FX slot is enabled. Resolves the target channel via $a_chn and $a_pos.',
+			options: [...GetDropdownWithVariables('FX Slot', 'slot', state.namedChoices.effects)],
+			defaultStyle: { bgcolor: combineRgb(0, 200, 0), color: combineRgb(0, 0, 0) },
+			callback: (event: CompanionFeedbackInfo): boolean => {
+				const slot = ActionUtil.getStringWithVariables(event, 'slot')
+				const slotNum = ActionUtil.getNodeNumberFromID(slot)
+				const ch = StateUtil.getNumberFromState(EffectCommands.AssignedChannel(slotNum), state)
+				const pos = StateUtil.getNumberFromState(EffectCommands.AssignedInsertSlot(slotNum), state)
+				if (ch === undefined || pos === undefined) return false
+				const onCmd = resolveInsertOnPath(ch, pos)
+				if (!onCmd) return false
+				const val = StateUtil.getNumberFromState(onCmd, state)
+				if (val === undefined) {
+					// $a_chn/$a_pos just loaded but the insert path is not in state yet — subscribe and
+					// request it now. subs.subscribe is idempotent so calling this on every check is safe.
+					subs.subscribe(onCmd, event.id, FeedbackId.FxInsertOn)
+					ensureLoaded(onCmd)
+					return false
+				}
+				return val === 1
+			},
+			subscribe: async (event): Promise<void> => {
+				const slot = ActionUtil.getStringWithVariables(event, 'slot')
+				const slotNum = ActionUtil.getNodeNumberFromID(slot)
+				subscribeFeedback(ensureLoaded, subs, EffectCommands.AssignedChannel(slotNum), event)
+				subscribeFeedback(ensureLoaded, subs, EffectCommands.AssignedInsertSlot(slotNum), event)
+			},
+			unsubscribe: (event: CompanionFeedbackInfo): void => {
+				const slot = ActionUtil.getStringWithVariables(event, 'slot')
+				const slotNum = ActionUtil.getNodeNumberFromID(slot)
+				unsubscribeFeedback(subs, EffectCommands.AssignedChannel(slotNum), event)
+				unsubscribeFeedback(subs, EffectCommands.AssignedInsertSlot(slotNum), event)
+				const ch = StateUtil.getNumberFromState(EffectCommands.AssignedChannel(slotNum), state)
+				const pos = StateUtil.getNumberFromState(EffectCommands.AssignedInsertSlot(slotNum), state)
+				const onCmd = ch !== undefined && pos !== undefined ? resolveInsertOnPath(ch, pos) : undefined
+				if (onCmd) unsubscribeFeedback(subs, onCmd, event)
 			},
 		},
 		[FeedbackId.MainAltSwitch]: {

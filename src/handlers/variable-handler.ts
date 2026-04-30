@@ -9,6 +9,7 @@ import { ModuleLogger } from '../handlers/logger.js'
 import { getAllVariables } from '../variables/index.js'
 
 const RE_NAME = /\/(\w+)\/(\d+)\/\$?name/
+const RE_FX = /^\/fx\/(\d+)\/(mdL|fxmix)$/
 const RE_GAIN = /\/(\w+)\/(\d+)\/in\/set\/\$g/
 const RE_MUTE = /^\/(ch|aux|bus|mtx|main|dca|mgrp)\/(\d+)(?:\/(send|main)\/(?:(MX)(\d+)|(\d+))\/(mute|on)|\/(mute))$/
 const RE_FADER = /^\/(\w+)\/(\w+)(?:\/(\w+)\/(\w+))?\/(fdr|lvl|\$fdr|\$lvl)$/
@@ -84,7 +85,8 @@ export class VariableHandler extends EventEmitter {
 				this.updateGpioVariables(path, args[0]?.value as number) ??
 				this.updateControlVariables(path, args[0]) ??
 				this.updateIoVariables(path, args[0]) ??
-				this.updateColorVariables(path, args[0]?.value as string)
+				this.updateColorVariables(path, args[0]?.value as string) ??
+				this.updateFxVariables(path, args[0])
 
 			if (result) {
 				updates.push(...result)
@@ -586,6 +588,17 @@ export class VariableHandler extends EventEmitter {
 		const base = match[1]
 		const num = match[2]
 		return [{ name: `${base}${num}_color`, value }]
+	}
+
+	private updateFxVariables(path: string, args: osc.MetaArgument): VariableUpdate[] | undefined {
+		const match = path.match(RE_FX)
+		if (!match) return
+
+		const fx = match[1]
+		const param = match[2]
+		if (param === 'mdL') return [{ name: `fx${fx}_model`, value: args.value as string }]
+		if (param === 'fxmix') return [{ name: `fx${fx}_fxmix`, value: args.value as number }]
+		return undefined
 	}
 
 	processMessage(msgs: Set<OscMessage>): void {

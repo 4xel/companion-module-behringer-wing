@@ -5,6 +5,8 @@ import { CommonActions } from './actions/common.js'
 import { OtherActionId } from './actions/control.js'
 import { FeedbackId } from './feedbacks.js'
 import { ConfigActions } from './actions/config.js'
+import { FxActionId } from './actions/fx.js'
+import { EffectCommands } from './commands/effect.js'
 
 export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPresetDefinitions {
 	const model = _instance.model
@@ -52,6 +54,10 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 
 	presets[`talkback-a-button`] = getTalkbackPreset('A')
 	presets[`talkback-b-button`] = getTalkbackPreset('B')
+
+	for (let i = 1; i <= model.effects; i++) {
+		presets[`fx${i}-bypass-button`] = getFxBypassPreset(i)
+	}
 
 	presets[`lights-bright`] = getLightPresetBright()
 	presets[`lights-dark`] = getLightPresetDark()
@@ -327,6 +333,38 @@ function getLightPresetDark(): CompanionButtonPresetDefinition {
 			},
 		],
 		feedbacks: [],
+	}
+}
+
+function getFxBypassPreset(slot: number): CompanionButtonPresetDefinition {
+	const path = EffectCommands.Node(slot)
+	return {
+		name: 'FX Bypass Toggle',
+		category: 'FX',
+		type: 'button',
+		style: {
+			text: `let m = $(wing:fx${slot}_model)\nreturn m && m !== 'NONE' ? \`FX${slot}\\n\${m}\` : \`FX ${slot}\``,
+			textExpression: true,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 0, 0),
+		},
+		steps: [
+			{
+				down: [{ actionId: FxActionId.SetFxInsertOn, options: { slot: path, enable: 2 } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.FxInsertOn,
+				options: { slot: path },
+				style: {
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(0, 180, 0),
+				},
+			},
+		],
 	}
 }
 

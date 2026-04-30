@@ -149,6 +149,7 @@ export class WingState implements IStoredChannelSubject {
 			dcas: [],
 			mutegroups: [],
 			scenes: [],
+			effects: [],
 		}
 
 		this.namedChoices.channels = []
@@ -208,8 +209,12 @@ export class WingState implements IStoredChannelSubject {
 		}
 
 		this.namedChoices.effects = []
+		this.names.effects = []
 		for (let fx = 1; fx <= model.effects; fx++) {
-			this.namedChoices.effects.push(this.getNameForChoice(fx, Commands.Effect.Node(fx), 'FX ' + fx, 'FX', 'FX'))
+			const model_name = this.getRealName(Commands.Effect.Model(fx))
+			const label = model_name && model_name !== 'NONE' ? `FX${fx} - ${model_name}` : `FX ${fx}`
+			this.names.effects.push(model_name ?? `FX ${fx}`)
+			this.namedChoices.effects.push({ id: Commands.Effect.Node(fx), label })
 		}
 	}
 
@@ -238,6 +243,9 @@ export class WingState implements IStoredChannelSubject {
 		}
 		for (let mgrp = 1; mgrp <= model.mutegroups; mgrp++) {
 			void sendCommand(Commands.MuteGroup.Name(mgrp))
+		}
+		for (let fx = 1; fx <= model.effects; fx++) {
+			void sendCommand(Commands.Effect.Model(fx))
 		}
 	}
 

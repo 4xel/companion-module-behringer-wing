@@ -134,6 +134,9 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Control | Set Light Intensities | Set the intensities of console lights. (leave empty for no change) |
 | Control | Set Selected | Set Selected Channel Strip |
 | Control | Set SOF | Set Sends on Fader |
+| fx | FX Slot - Restore Mix | Restore the previously stored fxmix of an FX slot. |
+| fx | FX Slot - Set Mix | Set the wet/dry mix percentage of an FX slot (0 silences the effect). |
+| fx | FX Slot - Store Mix | Store the current fxmix of an FX slot for later restore. |
 | IO | Set Main/Alt Switch | Sets the desk to use the configured main/alt input sources. |
 | Matrix | Adjust Direct Input Level | Adjust the level of a direct input on a matrix |
 | Matrix | Invert Direct Input | Invert the polarity of a direct input on a matrix |
