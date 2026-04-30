@@ -42,9 +42,15 @@ export function getWliveVariables(): VariableDefinition[] {
 			variableId: `wlive_${card}_session_len_hh_mm_ss`,
 			name: `Wing Live Card ${card} Session Length (hh:mm:ss)`,
 		})
-		variables.push({ variableId: `wlive_${card}_pos_ss`, name: `Wing Live Card ${card} Position (ss)` })
-		variables.push({ variableId: `wlive_${card}_pos_mm_ss`, name: `Wing Live Card ${card} Position (mm:ss)` })
-		variables.push({ variableId: `wlive_${card}_pos_hh_mm_ss`, name: `Wing Live Card ${card} Position (hh:mm:ss)` })
+		variables.push({ variableId: `wlive_${card}_elapsed_time_ss`, name: `Wing Live Card ${card} Elapsed Time (ss)` })
+		variables.push({
+			variableId: `wlive_${card}_elapsed_time_mm_ss`,
+			name: `Wing Live Card ${card} Elapsed Time (mm:ss)`,
+		})
+		variables.push({
+			variableId: `wlive_${card}_elapsed_time_hh_mm_ss`,
+			name: `Wing Live Card ${card} Elapsed Time (hh:mm:ss)`,
+		})
 		variables.push({ variableId: `wlive_${card}_sdfree_ss`, name: `Wing Live Card ${card} Free Space (ss)` })
 		variables.push({ variableId: `wlive_${card}_sdfree_mm_ss`, name: `Wing Live Card ${card} Free Space (mm:ss)` })
 		variables.push({

@@ -7,6 +7,7 @@ import { FeedbackId } from './feedbacks.js'
 import { ConfigActions } from './actions/config.js'
 import { FxActionId } from './actions/fx.js'
 import { EffectCommands } from './commands/effect.js'
+import { CardsActionId } from './actions/cards.js'
 
 export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPresetDefinitions {
 	const model = _instance.model
@@ -74,6 +75,21 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`fx${i}-delaytime-knob`] = getFxDelayParamKnobPreset(i, 'time', 'Time', 10, 250)
 		presets[`fx${i}-delayfeed-knob`] = getFxDelayParamKnobPreset(i, 'feed', 'Feed', 5, 30)
 		presets[`fx${i}-param-knob`] = getFxEffectParamKnobPreset(i)
+	}
+
+	for (let card = 1; card <= 2; card++) {
+		presets[`wlive-${card}-status`] = getWLiveStatusPreset(card)
+		presets[`wlive-${card}-rec`] = getWLiveTransportPreset(card, 'REC')
+		presets[`wlive-${card}-play`] = getWLiveTransportPreset(card, 'PLAY')
+		presets[`wlive-${card}-stop`] = getWLiveTransportPreset(card, 'STOP')
+		presets[`wlive-${card}-pause`] = getWLiveTransportPreset(card, 'PPAUSE')
+		presets[`wlive-${card}-marker-add`] = getWLiveAddMarkerPreset(card)
+		for (let m = 1; m <= 10; m++) {
+			presets[`wlive-${card}-marker-${m}`] = getWLiveGotoMarkerPreset(card, m)
+		}
+		presets[`wlive-${card}-sd-free`] = getWLiveSdFreePreset(card)
+		presets[`wlive-${card}-session-info`] = getWLiveSessionInfoPreset(card)
+		presets[`wlive-${card}-open-session`] = getWLiveOpenSessionPreset(card)
 	}
 
 	presets[`lights-bright`] = getLightPresetBright()
@@ -488,6 +504,203 @@ function getFxReverbParamKnobPreset(
 				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 80, 60) },
 			},
 		],
+	}
+}
+
+// ─── WLive presets ────────────────────────────────────────────────────────────
+
+const WLIVE_TRANSPORT_LABEL: Record<string, string> = {
+	REC: '⏺ REC',
+	PLAY: '▶ PLAY',
+	STOP: '⏹ STOP',
+	PPAUSE: '⏸ PAUSE',
+}
+
+const WLIVE_TRANSPORT_COLOR: Record<string, number> = {
+	REC: 0xc80000,
+	PLAY: 0x00a000,
+	STOP: 0x303030,
+	PPAUSE: 0xb48c00,
+}
+
+function getWLiveStatusPreset(card: number): CompanionButtonPresetDefinition {
+	return {
+		name: `WLive ${card} - Status`,
+		category: 'WLive',
+		type: 'button',
+		style: {
+			text: `WL${card} $(wing:wlive_${card}_state)\n$(wing:wlive_${card}_elapsed_time_hh_mm_ss)`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(30, 30, 30),
+		},
+		steps: [{ down: [], up: [] }],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.WLivePlaybackState,
+				options: { card: String(card), state: 'REC' },
+				style: { bgcolor: combineRgb(200, 0, 0), color: combineRgb(255, 255, 255) },
+			},
+			{
+				feedbackId: FeedbackId.WLivePlaybackState,
+				options: { card: String(card), state: 'PLAY' },
+				style: { bgcolor: combineRgb(0, 160, 0), color: combineRgb(255, 255, 255) },
+			},
+			{
+				feedbackId: FeedbackId.WLivePlaybackState,
+				options: { card: String(card), state: 'PPAUSE' },
+				style: { bgcolor: combineRgb(180, 140, 0), color: combineRgb(255, 255, 255) },
+			},
+		],
+	}
+}
+
+function getWLiveTransportPreset(card: number, action: string): CompanionButtonPresetDefinition {
+	const label = WLIVE_TRANSPORT_LABEL[action] ?? action
+	const activeColor = WLIVE_TRANSPORT_COLOR[action] ?? 0x404040
+	return {
+		name: `WLive ${card} - ${label}`,
+		category: 'WLive',
+		type: 'button',
+		style: {
+			text: `WL${card}\n${label}`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 0, 0),
+		},
+		steps: [
+			{
+				down: [{ actionId: CardsActionId.CardAction, options: { card: String(card), action } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.WLivePlaybackState,
+				options: { card: String(card), state: action },
+				style: {
+					bgcolor: activeColor,
+					color: combineRgb(255, 255, 255),
+				},
+			},
+		],
+	}
+}
+
+function getWLiveAddMarkerPreset(card: number): CompanionButtonPresetDefinition {
+	return {
+		name: `WLive ${card} - Add Marker`,
+		category: 'WLive',
+		type: 'button',
+		style: {
+			text: `WL${card}\n⚑ Mark`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 80, 160),
+		},
+		steps: [
+			{
+				down: [{ actionId: CardsActionId.AddMarker, options: { card: String(card) } }],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+}
+
+function getWLiveGotoMarkerPreset(card: number, marker: number): CompanionButtonPresetDefinition {
+	return {
+		name: `WLive ${card} - Goto Marker ${marker}`,
+		category: 'WLive',
+		type: 'button',
+		style: {
+			text: `WL${card}\n▶ M${marker}`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 60, 120),
+		},
+		steps: [
+			{
+				down: [{ actionId: CardsActionId.GotoMarker, options: { card: String(card), marker } }],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+}
+
+function getWLiveSdFreePreset(card: number): CompanionButtonPresetDefinition {
+	return {
+		name: `WLive ${card} - SD Free`,
+		category: 'WLive',
+		type: 'button',
+		style: {
+			text: `WL${card} SD\n$(wing:wlive_${card}_sdfree_hh_mm_ss)\nfree`,
+			size: 'auto',
+			color: combineRgb(200, 200, 200),
+			bgcolor: combineRgb(20, 40, 20),
+		},
+		steps: [{ down: [], up: [] }],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.WLiveSDState,
+				options: { card: String(card), state: 'READY' },
+				style: { bgcolor: combineRgb(20, 60, 20), color: combineRgb(200, 255, 200) },
+			},
+			{
+				feedbackId: FeedbackId.WLiveSDState,
+				options: { card: String(card), state: 'ERROR' },
+				style: { bgcolor: combineRgb(160, 0, 0), color: combineRgb(255, 200, 200) },
+			},
+			{
+				feedbackId: FeedbackId.WLiveSDState,
+				options: { card: String(card), state: 'NONE' },
+				style: { bgcolor: combineRgb(60, 60, 60), color: combineRgb(160, 160, 160) },
+			},
+		],
+	}
+}
+
+function getWLiveSessionInfoPreset(card: number): CompanionButtonPresetDefinition {
+	return {
+		name: `WLive ${card} - Session Info`,
+		category: 'WLive',
+		type: 'button',
+		style: {
+			text: `WL${card}\nSess $(wing:wlive_${card}_session_current)/$(wing:wlive_${card}_session_total)\n$(wing:wlive_${card}_session_len_hh_mm_ss)`,
+			size: 'auto',
+			color: combineRgb(200, 200, 200),
+			bgcolor: combineRgb(20, 20, 50),
+		},
+		steps: [{ down: [], up: [] }],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.WLivePlaybackState,
+				options: { card: String(card), state: 'REC' },
+				style: { bgcolor: combineRgb(80, 0, 0), color: combineRgb(255, 200, 200) },
+			},
+		],
+	}
+}
+
+function getWLiveOpenSessionPreset(card: number): CompanionButtonPresetDefinition {
+	return {
+		name: `WLive ${card} - Open Session`,
+		category: 'WLive',
+		type: 'button',
+		style: {
+			text: `WL${card}\n▶ Sess 1`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(40, 20, 80),
+		},
+		steps: [
+			{
+				down: [{ actionId: CardsActionId.OpenSession, options: { card: String(card), session: 1 } }],
+				up: [],
+			},
+		],
+		feedbacks: [],
 	}
 }
 

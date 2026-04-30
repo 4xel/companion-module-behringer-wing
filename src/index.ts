@@ -24,6 +24,7 @@ import { VariableHandler } from './handlers/variable-handler.js'
 import { OscForwarder } from './handlers/osc-forwarder.js'
 import debounceFn from 'debounce-fn'
 import { ModuleLogger } from './handlers/logger.js'
+import { CardsCommands } from './commands/cards.js'
 
 export class WingInstance extends InstanceBase<WingConfig> implements InstanceBaseExt<WingConfig> {
 	private readonly debounceHandleMessages: () => void
@@ -33,6 +34,7 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 	model: ModelSpec
 
 	connected: boolean = false
+	private wlivePoller?: NodeJS.Timeout
 
 	deviceDetector: WingDeviceDetectorInterface | undefined
 	connection: ConnectionHandler | undefined
@@ -74,6 +76,7 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 	async destroy(): Promise<void> {
 		this.deviceDetector?.unsubscribe(this.id)
 		this.transitions.stopAll()
+		this.stopWlivePoller()
 	}
 
 	private start(config: WingConfig): void {
@@ -89,11 +92,29 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 	}
 
 	private stop(): void {
+		this.stopWlivePoller()
 		this.connection?.close()
 		this.stateHandler?.clearState()
 		this.oscForwarder?.close()
 		this.oscForwarder = undefined
 		this.variableHandler?.destroy()
+	}
+
+	private startWlivePoller(): void {
+		this.stopWlivePoller()
+		this.wlivePoller = setInterval(() => {
+			for (let card = 1; card <= 2; card++) {
+				this.stateHandler?.ensureLoaded(CardsCommands.WLiveCardState(card))
+				this.stateHandler?.ensureLoaded(CardsCommands.WLiveCardETime(card))
+			}
+		}, 1000)
+	}
+
+	private stopWlivePoller(): void {
+		if (this.wlivePoller) {
+			clearInterval(this.wlivePoller)
+			this.wlivePoller = undefined
+		}
 	}
 
 	async configUpdated(config: WingConfig): Promise<void> {
@@ -152,6 +173,7 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 				void this.stateHandler?.state?.requestAllVariables(this)
 			}
 			this.stateHandler?.requestUpdate()
+			this.startWlivePoller()
 		})
 
 		this.connection?.on('error', (err: Error) => {
