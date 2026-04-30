@@ -57,6 +57,15 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 
 	for (let i = 1; i <= model.effects; i++) {
 		presets[`fx${i}-bypass-button`] = getFxBypassPreset(i)
+		presets[`fx${i}-mix-knob`] = getFxMixKnobPreset(i)
+		presets[`fx${i}-scroll-reverb`] = getFxScrollPreset(i, 'reverb')
+		presets[`fx${i}-scroll-delay`] = getFxScrollPreset(i, 'delay')
+		presets[`fx${i}-predelay-knob`] = getFxReverbParamKnobPreset(i, 'pdel', 'Pre-Dly', 1, 0)
+		presets[`fx${i}-decay-knob`] = getFxReverbParamKnobPreset(i, 'dcy', 'Decay', 0.1, 1.5)
+		presets[`fx${i}-size-knob`] = getFxReverbParamKnobPreset(i, 'size', 'Size', 1, 50)
+		presets[`fx${i}-delaytime-knob`] = getFxDelayParamKnobPreset(i, 'time', 'Time', 10, 250)
+		presets[`fx${i}-delayfeed-knob`] = getFxDelayParamKnobPreset(i, 'feed', 'Feed', 5, 30)
+		presets[`fx${i}-param-knob`] = getFxEffectParamKnobPreset(i)
 	}
 
 	presets[`lights-bright`] = getLightPresetBright()
@@ -351,7 +360,7 @@ function getFxBypassPreset(slot: number): CompanionButtonPresetDefinition {
 		},
 		steps: [
 			{
-				down: [{ actionId: FxActionId.SetFxInsertOn, options: { slot: path, enable: 2 } }],
+				down: [{ actionId: FxActionId.SetFxInsertOn, options: { slot: path, enable: -1 } }],
 				up: [],
 			},
 		],
@@ -363,6 +372,197 @@ function getFxBypassPreset(slot: number): CompanionButtonPresetDefinition {
 					color: combineRgb(255, 255, 255),
 					bgcolor: combineRgb(0, 180, 0),
 				},
+			},
+		],
+	}
+}
+
+function getFxMixKnobPreset(slot: number): CompanionButtonPresetDefinition {
+	const path = EffectCommands.Node(slot)
+	return {
+		name: `FX${slot} Mix Knob`,
+		category: 'FX',
+		type: 'button',
+		style: {
+			text: `FX${slot}\nMix\n$(wing:fx${slot}_fxmix)%`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 60, 120),
+		},
+		options: { rotaryActions: true },
+		steps: [
+			{
+				down: [{ actionId: FxActionId.SetFxMix, options: { slot: path, mix: 100, fadeDuration: 0 } }],
+				up: [],
+				rotate_left: [{ actionId: FxActionId.AdjustFxMix, options: { slot: path, step: -5 } }],
+				rotate_right: [{ actionId: FxActionId.AdjustFxMix, options: { slot: path, step: 5 } }],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.FxInsertOn,
+				options: { slot: path },
+				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 60, 120) },
+			},
+		],
+	}
+}
+
+function getFxScrollPreset(slot: number, group: string): CompanionButtonPresetDefinition {
+	const path = EffectCommands.Node(slot)
+	const label = group.charAt(0).toUpperCase() + group.slice(1)
+	return {
+		name: `FX${slot} Scroll ${label}`,
+		category: 'FX',
+		type: 'button',
+		style: {
+			text: `FX${slot}\n$(wing:fx${slot}_model)\n◀ ${label} ▶`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(80, 0, 100),
+		},
+		options: { rotaryActions: true },
+		steps: [
+			{
+				down: [{ actionId: FxActionId.SetFxInsertOn, options: { slot: path, enable: -1 } }],
+				up: [],
+				rotate_left: [
+					{ actionId: FxActionId.ScrollEffect, options: { slot: path, direction: 'prev', group, wrap: true } },
+				],
+				rotate_right: [
+					{ actionId: FxActionId.ScrollEffect, options: { slot: path, direction: 'next', group, wrap: true } },
+				],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.FxInsertOn,
+				options: { slot: path },
+				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(160, 0, 200) },
+			},
+		],
+	}
+}
+
+function getFxReverbParamKnobPreset(
+	slot: number,
+	param: string,
+	label: string,
+	step: number,
+	resetValue: number,
+): CompanionButtonPresetDefinition {
+	const path = EffectCommands.Node(slot)
+	return {
+		name: `FX${slot} Reverb ${label} Knob`,
+		category: 'FX',
+		type: 'button',
+		style: {
+			text: `FX${slot}\n${label}`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 80, 60),
+		},
+		options: { rotaryActions: true },
+		steps: [
+			{
+				down: [
+					{ actionId: FxActionId.SetReverbParam, options: { slot: path, param, value: resetValue, fadeDuration: 0 } },
+				],
+				up: [],
+				rotate_left: [{ actionId: FxActionId.AdjustReverbParam, options: { slot: path, param, step: -step } }],
+				rotate_right: [{ actionId: FxActionId.AdjustReverbParam, options: { slot: path, param, step } }],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.FxInsertOn,
+				options: { slot: path },
+				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 80, 60) },
+			},
+		],
+	}
+}
+
+function getFxEffectParamKnobPreset(slot: number): CompanionButtonPresetDefinition {
+	const path = EffectCommands.Node(slot)
+	return {
+		name: `FX${slot} Effect Param Knob`,
+		category: 'FX',
+		type: 'button',
+		style: {
+			text: `FX${slot}\nParam`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(60, 40, 100),
+		},
+		options: { rotaryActions: true },
+		steps: [
+			{
+				down: [
+					{
+						actionId: FxActionId.SetEffectParam,
+						options: { slot: path, effect: 'HALL', param_HALL: 'pdel', mode: 'set', value: 0, fadeDuration: 0 },
+					},
+				],
+				up: [],
+				rotate_left: [
+					{
+						actionId: FxActionId.SetEffectParam,
+						options: { slot: path, effect: 'HALL', param_HALL: 'pdel', mode: 'sub', value: 1 },
+					},
+				],
+				rotate_right: [
+					{
+						actionId: FxActionId.SetEffectParam,
+						options: { slot: path, effect: 'HALL', param_HALL: 'pdel', mode: 'add', value: 1 },
+					},
+				],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.FxInsertOn,
+				options: { slot: path },
+				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(60, 40, 100) },
+			},
+		],
+	}
+}
+
+function getFxDelayParamKnobPreset(
+	slot: number,
+	param: string,
+	label: string,
+	step: number,
+	resetValue: number,
+): CompanionButtonPresetDefinition {
+	const path = EffectCommands.Node(slot)
+	return {
+		name: `FX${slot} Delay ${label} Knob`,
+		category: 'FX',
+		type: 'button',
+		style: {
+			text: `FX${slot}\n${label}`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(100, 60, 0),
+		},
+		options: { rotaryActions: true },
+		steps: [
+			{
+				down: [
+					{ actionId: FxActionId.SetDelayParam, options: { slot: path, param, value: resetValue, fadeDuration: 0 } },
+				],
+				up: [],
+				rotate_left: [{ actionId: FxActionId.AdjustDelayParam, options: { slot: path, param, step: -step } }],
+				rotate_right: [{ actionId: FxActionId.AdjustDelayParam, options: { slot: path, param, step } }],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.FxInsertOn,
+				options: { slot: path },
+				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(100, 60, 0) },
 			},
 		],
 	}

@@ -43,6 +43,10 @@ export namespace EffectCommands {
 		return `${Node(effect)}/dcy`
 	}
 
+	export function Param(effect: number, param: string): string {
+		return `${Node(effect)}/${param}`
+	}
+
 	export function AssignedChannel(effect: number): string {
 		return `${Node(effect)}/$a_chn`
 	}

@@ -134,6 +134,10 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Control | Set Light Intensities | Set the intensities of console lights. (leave empty for no change) |
 | Control | Set Selected | Set Selected Channel Strip |
 | Control | Set SOF | Set Sends on Fader |
+| fx | FX Slot - Adjust Delay Parameter (Relative) | Nudge a delay parameter up or down. Use with encoder knobs on StreamDeck+. |
+| fx | FX Slot - Adjust Mix (Relative) | Nudge the wet/dry mix up or down. Use with encoder knobs on StreamDeck+. |
+| fx | FX Slot - Adjust Pitch / Modulation Parameter (Relative) | Nudge a pitch or modulation parameter up or down. Use with encoder knobs on StreamDeck+. |
+| fx | FX Slot - Adjust Reverb Parameter (Relative) | Nudge a reverb parameter up or down. Use with encoder knobs on StreamDeck+. |
 | fx | FX Slot - Restore Mix | Restore the previously stored fxmix of an FX slot. |
 | fx | FX Slot - Set Mix | Set the wet/dry mix percentage of an FX slot (0 silences the effect). |
 | fx | FX Slot - Store Mix | Store the current fxmix of an FX slot for later restore. |
