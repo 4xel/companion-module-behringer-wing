@@ -11,5 +11,6 @@ import { UsbPlayerCommands as UsbPlayer } from './usbplayer.js'
 import { CardsCommands as Cards } from './cards.js'
 import { ConfigurationCommands as Configuration } from './config.js'
 import { StatusCommands as Status } from './status.js'
+import { EffectCommands as Effect } from './effect.js'
 
-export { Aux, Channel, Bus, Matrix, Main, Dca, MuteGroup, Io, Control, UsbPlayer, Cards, Configuration, Status }
+export { Aux, Channel, Bus, Matrix, Main, Dca, MuteGroup, Io, Control, UsbPlayer, Cards, Configuration, Status, Effect }

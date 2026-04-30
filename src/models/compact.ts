@@ -11,6 +11,7 @@ export const WingCompact: ModelSpec = {
 	mains: 4,
 	dcas: 16,
 	mutegroups: 8,
+	effects: 16,
 
 	localInputs: 8,
 	localOutputs: 8,

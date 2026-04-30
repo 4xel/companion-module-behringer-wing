@@ -17,6 +17,7 @@ export interface ModelSpec {
 	mains: number
 	dcas: number
 	mutegroups: number
+	effects: number
 
 	localInputs: number
 	localOutputs: number

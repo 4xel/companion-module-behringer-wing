@@ -16,6 +16,7 @@ type NameChoices = {
 	dcas: DropdownChoice[]
 	mutegroups: DropdownChoice[]
 	scenes: DropdownChoice[]
+	effects: DropdownChoice[]
 }
 
 type Names = {
@@ -27,6 +28,7 @@ type Names = {
 	dcas: string[]
 	mutegroups: string[]
 	scenes: string[]
+	effects: string[]
 }
 export class WingState implements IStoredChannelSubject {
 	private readonly data: Map<string, osc.MetaArgument[]>
@@ -42,6 +44,7 @@ export class WingState implements IStoredChannelSubject {
 		dcas: [],
 		mutegroups: [],
 		scenes: [],
+		effects: [],
 	}
 
 	names: Names = {
@@ -53,6 +56,7 @@ export class WingState implements IStoredChannelSubject {
 		dcas: [],
 		mutegroups: [],
 		scenes: [],
+		effects: [],
 	}
 
 	sceneNameToIdMap: Map<string, number>
@@ -201,6 +205,11 @@ export class WingState implements IStoredChannelSubject {
 			this.namedChoices.mutegroups.push(
 				this.getNameForChoice(mgrp, Commands.MuteGroup.Node(mgrp), Commands.MuteGroup.Name(mgrp), 'Mute Group', 'MGRP'),
 			)
+		}
+
+		this.namedChoices.effects = []
+		for (let fx = 1; fx <= model.effects; fx++) {
+			this.namedChoices.effects.push(this.getNameForChoice(fx, Commands.Effect.Node(fx), 'FX ' + fx, 'FX', 'FX'))
 		}
 	}
 

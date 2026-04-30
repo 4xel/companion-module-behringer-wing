@@ -28,6 +28,7 @@ import { CardsCommands } from './commands/cards.js'
 import { IoCommands } from './commands/io.js'
 
 import { getCardsChoices, getCardsStatusChoices, getCardsActionChoices } from './choices/cards.js'
+import { EffectCommands } from './commands/effect.js'
 
 type CompanionFeedbackWithCallback = SetRequired<
 	CompanionBooleanFeedbackDefinition,
@@ -53,6 +54,7 @@ export enum FeedbackId {
 	MainAltSwitch = 'main-alt-switch',
 	ActiveScene = 'active-scene',
 	SofActive = 'sof-active',
+	EffectParam = 'effect-param',
 }
 
 function subscribeFeedback(
@@ -100,6 +102,38 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 	const mainSendDestinations = [...state.namedChoices.matrices]
 
 	const feedbacks: { [id in FeedbackId]: CompanionFeedbackWithCallback | undefined } = {
+		[FeedbackId.EffectParam]: {
+			type: 'advanced',
+			name: 'FX test',
+			description: 'fxTest',
+			options: [
+				{
+					type: 'checkbox',
+					label: 'Display State Text',
+					id: 'stateText',
+					default: false,
+				},
+			],
+			callback: (event): CompanionAdvancedFeedbackResult => {
+				const cmd = EffectCommands.Decay(3)
+				const decay = StateUtil.getStringFromState(cmd, state)
+				if (event.options.stateText) {
+					return {
+						text: `${decay ?? 'N/A'}`,
+					}
+				} else {
+					return {}
+				}
+			},
+			subscribe: (event): void => {
+				const cmd = EffectCommands.Decay(3)
+				subscribeFeedback(ensureLoaded, subs, cmd, event)
+			},
+			unsubscribe: (event: CompanionFeedbackInfo): void => {
+				const cmd = EffectCommands.Decay(3)
+				unsubscribeFeedback(subs, cmd, event)
+			},
+		},
 		[FeedbackId.MainAltSwitch]: {
 			type: 'boolean',
 			name: 'Main/Alt Input Source',
