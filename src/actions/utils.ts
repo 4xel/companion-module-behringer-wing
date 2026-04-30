@@ -672,6 +672,36 @@ export function getStripIndexFromString(sel: string): number {
 	return 0
 }
 
+export function getPhaseInvertCommand(sel: string): string {
+	const num = getNodeNumberFromID(sel)
+	if (sel.startsWith('/ch')) return ChannelCommands.InputInvert(num)
+	if (sel.startsWith('/aux')) return AuxCommands.InputInvert(num)
+	if (sel.startsWith('/bus')) return BusCommands.InputInvert(num)
+	if (sel.startsWith('/main')) return MainCommands.InputInvert(num)
+	if (sel.startsWith('/mtx')) return MatrixCommands.InputInvert(num)
+	return ''
+}
+
+export function getWidthCommand(sel: string): string {
+	const num = getNodeNumberFromID(sel)
+	if (sel.startsWith('/ch')) return ChannelCommands.Width(num)
+	if (sel.startsWith('/aux')) return AuxCommands.Width(num)
+	if (sel.startsWith('/bus')) return BusCommands.Width(num)
+	if (sel.startsWith('/main')) return MainCommands.Width(num)
+	if (sel.startsWith('/mtx')) return MatrixCommands.Width(num)
+	return ''
+}
+
+export function getSendModeCommand(src: string, dest: string): string {
+	const srcNum = getNodeNumberFromID(src)
+	const destNum = getNodeNumberFromID(dest)
+	if (!dest.startsWith('/bus')) return ''
+	if (src.startsWith('/ch')) return ChannelCommands.SendMode(srcNum, destNum)
+	if (src.startsWith('/aux')) return AuxCommands.SendMode(srcNum, destNum)
+	if (src.startsWith('/bus')) return BusCommands.SendMode(srcNum, destNum)
+	return ''
+}
+
 export function getStringFromStripIndex(index: number): string {
 	if (index === -1) {
 		return 'current'

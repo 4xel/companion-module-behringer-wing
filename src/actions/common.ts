@@ -89,6 +89,12 @@ export enum CommonActions {
 
 	// Inserts
 	SetInsertOn = 'set-insert-on',
+
+	// Monitor engineer tools
+	SetPhaseInvert = 'set-phase-invert',
+	SetWidth = 'set-width',
+	DeltaWidth = 'delta-width',
+	SetSendMode = 'set-send-mode',
 }
 
 export function createCommonActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
@@ -1100,6 +1106,116 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 					const cmd = ActionUtil.getPreInsertOnCommand(sel, nodeNum)
 					ensureLoaded(cmd)
 				}
+			},
+		},
+
+		////////////////////////////////////////////////////////////////
+		// Monitor engineer tools
+		////////////////////////////////////////////////////////////////
+
+		[CommonActions.SetPhaseInvert]: {
+			name: 'Set Phase Invert',
+			description: 'Flip the polarity of a channel or strip input. Useful for mic phase alignment during soundcheck.',
+			options: [
+				...GetDropdownWithVariables('Strip', 'sel', [...allChannels]),
+				...GetOnOffToggleDropdownWithVariables('invert', 'Phase Invert', true),
+			],
+			callback: async (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const val = ActionUtil.getNumberWithVariables(event, 'invert')
+				const cmd = ActionUtil.getPhaseInvertCommand(sel)
+				if (cmd === '') return
+				if (val === -1) {
+					const current = StateUtil.getBooleanFromState(cmd, state)
+					await send(cmd, Number(!current))
+				} else {
+					await send(cmd, val)
+				}
+			},
+			subscribe: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getPhaseInvertCommand(sel)
+				if (cmd) ensureLoaded(cmd)
+			},
+		},
+
+		[CommonActions.SetWidth]: {
+			name: 'Set Stereo Width',
+			description: 'Set the stereo width of a channel or strip (-150 = full mono, 0 = normal, 150 = full wide).',
+			options: [
+				...GetDropdownWithVariables('Strip', 'sel', [...allChannels]),
+				...GetNumberFieldWithVariables('Width (%)', 'width', -150, 150, 1, 0),
+				...FadeDurationChoice(),
+			],
+			callback: async (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const width = ActionUtil.getNumberWithVariables(event, 'width')
+				const cmd = ActionUtil.getWidthCommand(sel)
+				if (cmd === '') return
+				runTransition(cmd, 'width', event, state, transitions, width, false)
+			},
+			subscribe: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getWidthCommand(sel)
+				if (cmd) ensureLoaded(cmd)
+			},
+		},
+
+		[CommonActions.DeltaWidth]: {
+			name: 'Adjust Stereo Width (Relative)',
+			description: 'Nudge the stereo width up or down. Use with encoder knobs on StreamDeck+.',
+			options: [
+				...GetDropdownWithVariables('Strip', 'sel', [...allChannels]),
+				...GetNumberFieldWithVariables('Step (%)', 'step', -300, 300, 1, 10, 'Positive = wider, negative = narrower'),
+			],
+			callback: async (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const step = ActionUtil.getNumberWithVariables(event, 'step')
+				const cmd = ActionUtil.getWidthCommand(sel)
+				if (cmd === '') return
+				const current = StateUtil.getNumberFromState(cmd, state) ?? 0
+				const newVal = Math.max(-150, Math.min(150, current + step))
+				await send(cmd, newVal)
+				state.set(cmd, [{ type: 'f', value: newVal }])
+			},
+			subscribe: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getWidthCommand(sel)
+				if (cmd) ensureLoaded(cmd)
+			},
+		},
+
+		[CommonActions.SetSendMode]: {
+			name: 'Set Bus Send Mode',
+			description:
+				'Set a channel send to a bus as PRE-fader, POST-fader, or Group (GRP). Core monitor engineering action.',
+			options: [
+				...GetDropdownWithVariables('From', 'src', [
+					...state.namedChoices.channels,
+					...state.namedChoices.auxes,
+					...state.namedChoices.busses,
+				]),
+				...GetDropdownWithVariables('To Bus', 'dest', [...state.namedChoices.busses]),
+				...GetDropdownWithVariables('Mode', 'mode', [
+					{ id: 'PRE', label: 'PRE (pre-fader)' },
+					{ id: 'POST', label: 'POST (post-fader)' },
+					{ id: 'GRP', label: 'GRP (group)' },
+				]),
+			],
+			callback: async (event) => {
+				const src = ActionUtil.getStringWithVariables(event, 'src')
+				const dest = ActionUtil.getStringWithVariables(event, 'dest')
+				const mode = ActionUtil.getStringWithVariables(event, 'mode')
+				const cmd = ActionUtil.getSendModeCommand(src, dest)
+				if (cmd === '') return
+				await send(cmd, mode)
+				state.set(cmd, [{ type: 's', value: mode }])
+			},
+			subscribe: (event) => {
+				const src = ActionUtil.getStringWithVariables(event, 'src')
+				const dest = ActionUtil.getStringWithVariables(event, 'dest')
+				const cmd = ActionUtil.getSendModeCommand(src, dest)
+				if (cmd) ensureLoaded(cmd)
 			},
 		},
 	}

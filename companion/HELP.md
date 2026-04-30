@@ -77,6 +77,7 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Common | Adjust Panorama | Adjust the panorama of a channel, aux, bus, matrix or main. |
 | Common | Adjust Send Level | Adjust the send level from a destination channel strip to a source |
 | Common | Adjust Send Panorama | Adjust the panorama of a send from a channel or aux to a bus or matrix. |
+| Common | Adjust Stereo Width (Relative) | Nudge the stereo width up or down. Use with encoder knobs on StreamDeck+. |
 | Common | Clear Solo | Clear the Solo from all channels, auxes, busses, matrices and mains. |
 | Common | Restore Gain | Restore the gain of a channel or aux. |
 | Common | Restore Level | Restore the fader level of a channel, aux, bus, dca, matrix or main. |
@@ -99,12 +100,14 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Common | Set Mute | Set or toggle the mute state of a channel, aux, bus, dca, matrix or main. |
 | Common | Set Name | Set the name of a channel, aux, bus, dca, matrix, main, or a mutegroup. |
 | Common | Set Panorama | Set the panorama of a channel, aux, bus, matrix or main. |
+| Common | Set Phase Invert | Flip the polarity of a channel or strip input. Useful for mic phase alignment during soundcheck. |
 | Common | Set Scribble Light | Set or toggle the scribble light state of a channel, aux, bus, dca, matrix, or main. |
 | Common | Set Scribble Light Color | Set the scribble light color of a channel, aux, bus, dca, matrix, or main. |
 | Common | Set Send Level | Set the send level from a destination channel strip to a source |
 | Common | Set Send Mute | Set or toggle the mute state of a send from a destination channel strip to a source |
 | Common | Set Send Panorama | Set the panorama of a send from a channel or aux to a bus or matrix. |
 | Common | Set Solo | Set the solo state for a channel, aux, bux, matrix or main |
+| Common | Set Stereo Width | Set the stereo width of a channel or strip (-150 = full mono, 0 = normal, 150 = full wide). |
 | Common | Store Gain | Store the gain of a channel or aux. |
 | Common | Store Level | Store the fader level of a channel, aux, bus, dca, matrix or main. |
 | Common | Store Panorama | Store the panorama of a channel, aux, bus, matrix or main. |

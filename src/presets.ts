@@ -20,6 +20,14 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`ch${i}-solo-button`] = getSoloPreset('ch', i)
 		presets[`ch${i}-boost-and-center-button`] = getBoostAndCenterPreset('ch', i)
 		presets[`ch${i}-sof-button`] = getSofPresets('ch', i)
+		presets[`ch${i}-phase-invert`] = getPhaseInvertPreset('ch', i)
+		presets[`ch${i}-width-knob`] = getWidthKnobPreset('ch', i)
+	}
+
+	for (let i = 1; i <= model.busses; i++) {
+		for (let ch = 1; ch <= Math.min(model.channels, 8); ch++) {
+			presets[`ch${ch}-bus${i}-send-mode`] = getSendModePreset(ch, i)
+		}
 	}
 
 	for (let i = 1; i <= model.auxes; i++) {
@@ -478,6 +486,100 @@ function getFxReverbParamKnobPreset(
 				feedbackId: FeedbackId.FxInsertOn,
 				options: { slot: path },
 				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 80, 60) },
+			},
+		],
+	}
+}
+
+function getPhaseInvertPreset(base: string, num: number): CompanionButtonPresetDefinition {
+	const path = `/${base}/${num}`
+	const name = `${base.toUpperCase()}${num}`
+	return {
+		name: `${name} Phase Invert`,
+		category: 'Monitor Tools',
+		type: 'button',
+		style: {
+			text: `${name}\nΦ`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 0, 0),
+		},
+		steps: [
+			{
+				down: [{ actionId: CommonActions.SetPhaseInvert, options: { sel: path, invert: -1 } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.PhaseInvert,
+				options: { sel: path },
+				style: { color: combineRgb(255, 255, 0), bgcolor: combineRgb(180, 0, 0) },
+			},
+		],
+	}
+}
+
+function getWidthKnobPreset(base: string, num: number): CompanionButtonPresetDefinition {
+	const path = `/${base}/${num}`
+	const name = `${base.toUpperCase()}${num}`
+	return {
+		name: `${name} Width Knob`,
+		category: 'Monitor Tools',
+		type: 'button',
+		style: {
+			text: `${name}\nWidth`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 80, 100),
+		},
+		options: { rotaryActions: true },
+		steps: [
+			{
+				down: [{ actionId: CommonActions.SetWidth, options: { sel: path, width: 0, fadeDuration: 0 } }],
+				up: [],
+				rotate_left: [{ actionId: CommonActions.DeltaWidth, options: { sel: path, step: -10 } }],
+				rotate_right: [{ actionId: CommonActions.DeltaWidth, options: { sel: path, step: 10 } }],
+			},
+		],
+		feedbacks: [],
+	}
+}
+
+function getSendModePreset(ch: number, bus: number): CompanionButtonPresetDefinition {
+	const src = `/ch/${ch}`
+	const dest = `/bus/${bus}`
+	return {
+		name: `CH${ch}→BUS${bus} Send Mode`,
+		category: 'Monitor Tools',
+		type: 'button',
+		style: {
+			text: `CH${ch}→B${bus}\nPRE`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 0, 0),
+		},
+		steps: [
+			{
+				down: [{ actionId: CommonActions.SetSendMode, options: { src, dest, mode: 'PRE' } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.SendMode,
+				options: { src, dest, mode: 'PRE' },
+				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(180, 80, 0) },
+			},
+			{
+				feedbackId: FeedbackId.SendMode,
+				options: { src, dest, mode: 'POST' },
+				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 130, 0) },
+			},
+			{
+				feedbackId: FeedbackId.SendMode,
+				options: { src, dest, mode: 'GRP' },
+				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 60, 180) },
 			},
 		],
 	}

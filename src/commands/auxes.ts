@@ -148,6 +148,10 @@ export namespace AuxCommands {
 		return `${SendNode(aux, send)}/lvl`
 	}
 
+	export function SendMode(aux: number, send: number): string {
+		return `${SendNode(aux, send)}/mode`
+	}
+
 	export function SendPan(aux: number, send: number): string {
 		return `${SendNode(aux, send)}/pan`
 	}

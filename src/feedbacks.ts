@@ -56,6 +56,8 @@ export enum FeedbackId {
 	SofActive = 'sof-active',
 	FxMuted = 'fx-muted',
 	FxInsertOn = 'fx-insert-on',
+	PhaseInvert = 'phase-invert',
+	SendMode = 'send-mode',
 }
 
 function subscribeFeedback(
@@ -727,6 +729,73 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 			unsubscribe: (event: CompanionFeedbackInfo): void => {
 				const cmd = ControlCommands.SetSof()
 				unsubscribeFeedback(subs, cmd, event)
+			},
+		},
+		[FeedbackId.PhaseInvert]: {
+			type: 'boolean',
+			name: 'Phase Inverted',
+			description: 'Active when the phase is inverted on a channel or strip.',
+			defaultStyle: {
+				color: combineRgb(255, 255, 0),
+				bgcolor: combineRgb(180, 0, 0),
+			},
+			options: [...GetDropdownWithVariables('Strip', 'sel', allChannels)],
+			callback: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getPhaseInvertCommand(sel)
+				return StateUtil.getBooleanFromState(cmd, state) === true
+			},
+			subscribe: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getPhaseInvertCommand(sel)
+				if (cmd) subscribeFeedback(ensureLoaded, subs, cmd, event)
+			},
+			unsubscribe: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getPhaseInvertCommand(sel)
+				if (cmd) unsubscribeFeedback(subs, cmd, event)
+			},
+		},
+
+		[FeedbackId.SendMode]: {
+			type: 'boolean',
+			name: 'Send Mode',
+			description: 'Active when a bus send is in the specified mode (PRE / POST / GRP).',
+			defaultStyle: {
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(0, 100, 180),
+			},
+			options: [
+				...GetDropdownWithVariables('From', 'src', [
+					...state.namedChoices.channels,
+					...state.namedChoices.auxes,
+					...state.namedChoices.busses,
+				]),
+				...GetDropdownWithVariables('To Bus', 'dest', [...state.namedChoices.busses]),
+				...GetDropdownWithVariables('Mode', 'mode', [
+					{ id: 'PRE', label: 'PRE (pre-fader)' },
+					{ id: 'POST', label: 'POST (post-fader)' },
+					{ id: 'GRP', label: 'GRP (group)' },
+				]),
+			],
+			callback: (event) => {
+				const src = ActionUtil.getStringWithVariables(event, 'src')
+				const dest = ActionUtil.getStringWithVariables(event, 'dest')
+				const mode = ActionUtil.getStringWithVariables(event, 'mode')
+				const cmd = ActionUtil.getSendModeCommand(src, dest)
+				return StateUtil.getStringFromState(cmd, state) === mode
+			},
+			subscribe: (event) => {
+				const src = ActionUtil.getStringWithVariables(event, 'src')
+				const dest = ActionUtil.getStringWithVariables(event, 'dest')
+				const cmd = ActionUtil.getSendModeCommand(src, dest)
+				if (cmd) subscribeFeedback(ensureLoaded, subs, cmd, event)
+			},
+			unsubscribe: (event) => {
+				const src = ActionUtil.getStringWithVariables(event, 'src')
+				const dest = ActionUtil.getStringWithVariables(event, 'dest')
+				const cmd = ActionUtil.getSendModeCommand(src, dest)
+				if (cmd) unsubscribeFeedback(subs, cmd, event)
 			},
 		},
 	}

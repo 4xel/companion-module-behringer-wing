@@ -100,6 +100,10 @@ export namespace BusCommands {
 		return `${SendNode(bus, send)}/lvl`
 	}
 
+	export function SendMode(bus: number, send: number): string {
+		return `${SendNode(bus, send)}/mode`
+	}
+
 	export function SendPan(bus: number, send: number): string {
 		return `${SendNode(bus, send)}/pan`
 	}
