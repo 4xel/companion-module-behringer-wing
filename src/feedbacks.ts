@@ -1014,7 +1014,7 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 					else color = combineRgb(150, 150, 150)
 				}
 				const dbStr = db !== undefined ? (db === -144 ? '−∞' : `${db >= 0 ? '+' : ''}${db.toFixed(1)}`) : '---'
-				return { text: `${name}\n${bar} ${dbStr}dB`, color, size: 14 }
+				return { text: `${name}\n${bar}\n${dbStr}dB`, color, size: 14 }
 			},
 			subscribe: (event: CompanionFeedbackInfo) => {
 				const sel = ActionUtil.getStringWithVariables(event, 'sel')
