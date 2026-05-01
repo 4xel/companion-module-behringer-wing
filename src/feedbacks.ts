@@ -1051,7 +1051,10 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 				const valCol = getActualFromState(`${sel}/col`, st)
 				// Wing sends 0-based colour indices; documentation labels them 1-18
 				const idx = Math.round(valDollar ?? valCol ?? -1) + 1
-				return { bgcolor: WING_STRIP_COLOURS[idx] ?? combineRgb(40, 40, 40) }
+				return {
+					bgcolor: WING_STRIP_COLOURS[idx] ?? combineRgb(40, 40, 40),
+					color: WING_STRIP_TEXT_COLOURS[idx] ?? combineRgb(255, 255, 255),
+				}
 			},
 			subscribe: (event: CompanionFeedbackInfo) => {
 				const sel = ActionUtil.getStringWithVariables(event, 'sel')
@@ -1089,4 +1092,28 @@ const WING_STRIP_COLOURS: Record<number, number> = {
 	16: combineRgb(48, 200, 152), // Mint
 	17: combineRgb(144, 144, 144), // Gray
 	18: combineRgb(216, 216, 216), // White
+}
+
+const WHITE = combineRgb(255, 255, 255)
+const BLACK = combineRgb(0, 0, 0)
+const WING_STRIP_TEXT_COLOURS: Record<number, number> = {
+	0: WHITE,
+	1: WHITE, // Blue (medium)
+	2: WHITE, // Blue (royal)
+	3: WHITE, // Violet
+	4: BLACK, // Teal / Cyan
+	5: WHITE, // Green
+	6: WHITE, // Green (dark)
+	7: BLACK, // Yellow
+	8: WHITE, // Brown
+	9: WHITE, // Red
+	10: BLACK, // Salmon
+	11: WHITE, // Magenta
+	12: WHITE, // Purple
+	13: BLACK, // Orange
+	14: BLACK, // Sky Blue
+	15: WHITE, // Coral
+	16: BLACK, // Mint
+	17: BLACK, // Gray
+	18: BLACK, // White
 }
