@@ -1006,13 +1006,18 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 			unsubscribe: () => {},
 		},
 
+		// Placeholder — overridden below by advancedFeedbacks spread.
+		[FeedbackId.StripColour]: undefined,
+	}
+
+	// Advanced feedbacks return full style objects directly — no user config needed.
+	const advancedFeedbacks = {
 		[FeedbackId.StripColour]: {
-			type: 'boolean',
+			type: 'advanced' as const,
 			name: 'Strip - Colour Sync',
 			description:
 				'Sets the button background colour to match the strip colour on the Wing desk. ' +
 				'Add to any button to keep it visually in sync with the desk layout.',
-			defaultStyle: {},
 			options: [
 				...GetDropdownWithVariables('Strip', 'sel', [
 					...state.namedChoices.channels,
@@ -1027,17 +1032,21 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 				const sel = ActionUtil.getStringWithVariables(event, 'sel')
 				const raw = _self.stateHandler?.state?.get(`${sel}/$col`) ?? _self.stateHandler?.state?.get(`${sel}/col`)
 				const idx = typeof raw === 'number' ? Math.round(raw) : 0
-				return { bgcolor: WING_STRIP_COLOURS[idx] ?? combineRgb(40, 40, 40) } as any
+				return { bgcolor: WING_STRIP_COLOURS[idx] ?? combineRgb(40, 40, 40) }
 			},
 			subscribe: (event: CompanionFeedbackInfo) => {
 				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				subs.subscribe(`${sel}/$col`, event.id, FeedbackId.StripColour)
 				ensureLoaded(`${sel}/$col`)
 			},
-			unsubscribe: () => {},
+			unsubscribe: (event: CompanionFeedbackInfo) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				subs.unsubscribe(`${sel}/$col`, event.id)
+			},
 		},
 	}
 
-	return feedbacks
+	return { ...feedbacks, ...advancedFeedbacks }
 }
 
 // Wing strip colour palette — index matches the /col integer (1-18).
