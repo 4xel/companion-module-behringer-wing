@@ -11,7 +11,6 @@ const RE_TRIM = /^\/ch\/(\d+)\/in\/set\/trim$/
 const TRIM_MIN = -18
 const TRIM_MAX = 18
 const TRIM_TOLERANCE = 0.05
-const COMP_DEBOUNCE_MS = 200
 const SWEEP_MS = 5000
 
 interface ChannelRef {
@@ -53,9 +52,6 @@ export class GainCompensationHandler extends EventEmitter {
 	private snapshotTakenAt?: Date
 	private snapshotTimer?: NodeJS.Timeout
 
-	// Per-channel debounce for reactive auto-compensation
-	private compDebounce = new Map<number, NodeJS.Timeout>()
-
 	// Background reconciliation sweep
 	private sweepTimer?: NodeJS.Timeout
 
@@ -84,9 +80,11 @@ export class GainCompensationHandler extends EventEmitter {
 
 				if (this.refs.has(ch)) this.emit('check-feedbacks', ['channel-needs-comp'])
 
-				// Only schedule auto-comp when the value actually changed
+				// Apply compensation immediately on every gain change — matches reference
+				// app behaviour. No debounce: a debounce delays trim writes until the knob
+				// pauses, making it appear to "stop working" during rapid changes.
 				if (changed && this.enabled && this.mode === 'auto' && this.refs.has(ch)) {
-					this.scheduleAutoComp(ch)
+					this.applyCompensationForChannel(ch)
 				}
 				continue
 			}
@@ -132,7 +130,6 @@ export class GainCompensationHandler extends EventEmitter {
 	disable(): void {
 		this.enabled = false
 		this.stopSweep()
-		this.clearCompDebounces()
 		this.emitGlobalVariables()
 		this.emit('check-feedbacks', ['gain-comp-active', 'gain-comp-manual-active'])
 	}
@@ -178,7 +175,6 @@ export class GainCompensationHandler extends EventEmitter {
 
 	destroy(): void {
 		this.stopSweep()
-		this.clearCompDebounces()
 		if (this.snapshotTimer) clearTimeout(this.snapshotTimer)
 	}
 
@@ -197,18 +193,6 @@ export class GainCompensationHandler extends EventEmitter {
 		this.logger?.info(`GainComp: snapshot captured ${count}/${this.model.channels} channels`)
 		this.emitGlobalVariables()
 		this.emit('check-feedbacks', ['gain-comp-snapshot-exists'])
-	}
-
-	private scheduleAutoComp(ch: number): void {
-		const existing = this.compDebounce.get(ch)
-		if (existing) clearTimeout(existing)
-		this.compDebounce.set(
-			ch,
-			setTimeout(() => {
-				this.compDebounce.delete(ch)
-				this.applyCompensationForChannel(ch)
-			}, COMP_DEBOUNCE_MS),
-		)
 	}
 
 	private applyCompensationForChannel(ch: number): void {
@@ -251,11 +235,6 @@ export class GainCompensationHandler extends EventEmitter {
 			clearInterval(this.sweepTimer)
 			this.sweepTimer = undefined
 		}
-	}
-
-	private clearCompDebounces(): void {
-		for (const t of this.compDebounce.values()) clearTimeout(t)
-		this.compDebounce.clear()
 	}
 
 	private emitGlobalVariables(): void {
