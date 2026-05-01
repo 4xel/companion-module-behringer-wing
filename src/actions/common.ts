@@ -30,6 +30,7 @@ import { getIdLabelPair } from '../choices/utils.js'
 import { getSourceGroupChoices } from '../choices/common.js'
 import { MuteGroupCommands } from '../commands/mutegroup.js'
 import { IoCommands } from '../commands/io.js'
+import { ConfigurationCommands } from '../commands/config.js'
 
 export enum CommonActions {
 	// Setup
@@ -112,6 +113,16 @@ export enum CommonActions {
 
 	// Reset
 	ResetChannel = 'reset-channel',
+
+	// Headamp gain (IO-resolved)
+	SetHeadampGain = 'set-headamp-gain',
+	AdjustHeadampGain = 'adjust-headamp-gain',
+
+	// Input patching
+	SetInputPatch = 'set-input-patch',
+
+	// RTA
+	SetRtaSource = 'set-rta-source',
 
 	// Gain compensation
 	TakeGainSnapshot = 'take-gain-snapshot',
@@ -1439,6 +1450,112 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 					await send(widthCmd, 0)
 					state.set(widthCmd, [{ type: 'f', value: 0 }])
 				}
+			},
+		},
+
+		////////////////////////////////////////////////////////////////
+		// Headamp gain (IO-resolved)
+		////////////////////////////////////////////////////////////////
+
+		[CommonActions.SetHeadampGain]: {
+			name: 'Set Headamp Gain',
+			description:
+				'Set the actual preamp gain on a channel or aux by resolving the IO source path at runtime. Range: −3 to 45.5 dB.',
+			options: [
+				...GetDropdownWithVariables('Channel', 'channel', [
+					...state.namedChoices.channels,
+					...state.namedChoices.auxes,
+				]),
+				...GetNumberFieldWithVariables('Gain (dB)', 'gain', -3, 45.5, 0.5, 0),
+			],
+			callback: async (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'channel')
+				const gain = ActionUtil.getNumberWithVariables(event, 'gain')
+				const grp = StateUtil.getStringFromState(ActionUtil.getMainInputConnectionGroupCommand(sel), state)
+				const idx = StateUtil.getNumberFromState(ActionUtil.getMainInputConnectionIndexCommand(sel), state)
+				if (!grp || idx === undefined) return
+				await send(IoCommands.InputGain(grp, Math.round(idx)), Math.max(-3, Math.min(45.5, gain)), true)
+			},
+			subscribe: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'channel')
+				ensureLoaded(ActionUtil.getMainInputConnectionGroupCommand(sel))
+				ensureLoaded(ActionUtil.getMainInputConnectionIndexCommand(sel))
+			},
+		},
+
+		[CommonActions.AdjustHeadampGain]: {
+			name: 'Adjust Headamp Gain (Relative)',
+			description: 'Nudge the actual preamp gain up or down. Resolves the IO source path at runtime.',
+			options: [
+				...GetDropdownWithVariables('Channel', 'channel', [
+					...state.namedChoices.channels,
+					...state.namedChoices.auxes,
+				]),
+				...GetNumberFieldWithVariables(
+					'Step (dB)',
+					'step',
+					-48,
+					48,
+					0.5,
+					3,
+					'Positive = increase, negative = decrease',
+				),
+			],
+			callback: async (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'channel')
+				const step = ActionUtil.getNumberWithVariables(event, 'step')
+				const grp = StateUtil.getStringFromState(ActionUtil.getMainInputConnectionGroupCommand(sel), state)
+				const idx = StateUtil.getNumberFromState(ActionUtil.getMainInputConnectionIndexCommand(sel), state)
+				if (!grp || idx === undefined) return
+				const gainCmd = IoCommands.InputGain(grp, Math.round(idx))
+				const current = StateUtil.getNumberFromState(gainCmd, state) ?? 0
+				const newGain = Math.max(-3, Math.min(45.5, current + step))
+				await send(gainCmd, newGain, true)
+				state.set(gainCmd, [{ type: 'f', value: newGain }])
+			},
+			subscribe: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'channel')
+				ensureLoaded(ActionUtil.getMainInputConnectionGroupCommand(sel))
+				ensureLoaded(ActionUtil.getMainInputConnectionIndexCommand(sel))
+			},
+		},
+
+		////////////////////////////////////////////////////////////////
+		// Input patching
+		////////////////////////////////////////////////////////////////
+
+		[CommonActions.SetInputPatch]: {
+			name: 'Set Input Patch',
+			description: 'Repatch a channel or aux to a different physical input source (sets both source group and index).',
+			options: [
+				...GetDropdownWithVariables('Channel', 'channel', [
+					...state.namedChoices.channels,
+					...state.namedChoices.auxes,
+				]),
+				...GetDropdownWithVariables('Source Group', 'grp', getSourceGroupChoices()),
+				...GetNumberFieldWithVariables('Source Index', 'idx', 1, 64, 1, 1),
+			],
+			callback: async (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'channel')
+				const grp = ActionUtil.getStringWithVariables(event, 'grp')
+				const idx = ActionUtil.getNumberWithVariables(event, 'idx')
+				await send(ActionUtil.getMainInputConnectionGroupCommand(sel), grp)
+				await send(ActionUtil.getMainInputConnectionIndexCommand(sel), idx)
+			},
+		},
+
+		////////////////////////////////////////////////////////////////
+		// RTA source
+		////////////////////////////////////////////////////////////////
+
+		[CommonActions.SetRtaSource]: {
+			name: 'Set RTA Source',
+			description: 'Set the source strip feeding the RTA analyser. Uses the global strip index (1–76, 0 = off).',
+			options: [...GetDropdownWithVariables('Strip', 'strip', [{ id: '0', label: 'Off' }, ...allChannels])],
+			callback: async (event) => {
+				const strip = ActionUtil.getStringWithVariables(event, 'strip')
+				const idx = strip === '0' ? 0 : ActionUtil.getStripIndexFromString(strip)
+				await send(ConfigurationCommands.RtaSource(), idx)
 			},
 		},
 

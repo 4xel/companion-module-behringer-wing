@@ -74,6 +74,7 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Channel | Set Channel Process Order | Set the process order of EQ, gate, dynamics and insert of a channel. |
 | Common | Adjust Fader Level | Adjust the level of a channel, aux, bus, dca, matrix or main. |
 | Common | Adjust Gain | Adjust the input gain of a channel or aux. |
+| Common | Adjust Headamp Gain (Relative) | Nudge the actual preamp gain up or down. Resolves the IO source path at runtime. |
 | Common | Adjust Input Trim (Relative) | Nudge the input trim up or down by a step. |
 | Common | Adjust Panorama | Adjust the panorama of a channel, aux, bus, matrix or main. |
 | Common | Adjust Send Level | Adjust the send level from a destination channel strip to a source |
@@ -102,6 +103,7 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Common | Set Gain | Set the input gain of a channel or aux. |
 | Common | Set Gate On | Enable, disable or toggle the on-state of a gate on a channel |
 | Common | Set Global Main/Alt Input | Switch all channels between their Main and Alt input sources globally via /io/altsw. |
+| Common | Set Input Patch | Repatch a channel or aux to a different physical input source (sets both source group and index). |
 | Common | Set Input Trim | Set the input trim of a channel or aux strip. |
 | Common | Set Insert On | Enable or disable an insert for a channel, aux, bus, matrix or main. |
 | Common | Set Level | Set the fader level of a channel, aux, bus, dca, matrix or main to a value. |
@@ -110,6 +112,7 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Common | Set Panorama | Set the panorama of a channel, aux, bus, matrix or main. |
 | Common | Set Phantom Power | Enable, disable, or toggle phantom power (+48V) on a channel or aux strip. |
 | Common | Set Phase Invert | Flip the polarity of a channel or strip input. Useful for mic phase alignment during soundcheck. |
+| Common | Set RTA Source | Set the source strip feeding the RTA analyser. Uses the global strip index (1–76, 0 = off). |
 | Common | Set Scribble Light | Set or toggle the scribble light state of a channel, aux, bus, dca, matrix, or main. |
 | Common | Set Scribble Light Color | Set the scribble light color of a channel, aux, bus, dca, matrix, or main. |
 | Common | Set Send Level | Set the send level from a destination channel strip to a source |

@@ -222,6 +222,18 @@ export namespace ConfigurationCommands {
 		return `${SoloNode()}/$flip`
 	}
 
+	export function RtaNode(): string {
+		return `${ConfigNode()}/rta`
+	}
+
+	export function RtaSource(): string {
+		return `${RtaNode()}/rtasrc`
+	}
+
+	export function RtaTap(): string {
+		return `${RtaNode()}/rtatap`
+	}
+
 	export function TalkbackNode(talkback: string): string {
 		return `${ConfigNode()}/talk/${talkback}`
 	}
