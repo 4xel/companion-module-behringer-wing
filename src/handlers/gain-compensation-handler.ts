@@ -101,11 +101,11 @@ export class GainCompensationHandler extends EventEmitter {
 				const trim = extractValue(args)
 				if (trim === null) continue
 
-				// Ignore trim messages during the post-write cooldown window.
-				// sendCommand sends SET then immediately QUERY; if UDP reorders them
-				// or Wing is slow, the echo can return the OLD trim value and overwrite
-				// our locally-set trimCache, causing isChannelCompOk to flicker false.
-				if (this.trimCooldown.has(ch)) continue
+				// /*S pushes are 1-arg (engineer changed trim on console) — always accept.
+				// Query echos are 3-arg (from sendCommand's empty follow-up query) —
+				// ignore during cooldown so stale echos from prior queries don't
+				// overwrite the locally-set trimCache value.
+				if (args.length >= 3 && this.trimCooldown.has(ch)) continue
 
 				this.trimCache.set(ch, trim)
 				this.emitChannelVariables(ch)
@@ -220,7 +220,9 @@ export class GainCompensationHandler extends EventEmitter {
 
 		const newTrim = Math.max(TRIM_MIN, Math.min(TRIM_MAX, ref.trim - delta))
 
-		// Update local cache immediately and block echo overwrites for 300ms
+		// Update local cache immediately. Block 3-arg query echos for 1s so that
+		// queued echos from earlier rapid gain changes cannot corrupt trimCache after
+		// the cooldown expires. 1-arg /*S pushes (manual console changes) bypass this.
 		this.trimCache.set(ch, newTrim)
 		const existing = this.trimCooldownTimers.get(ch)
 		if (existing) clearTimeout(existing)
@@ -230,7 +232,7 @@ export class GainCompensationHandler extends EventEmitter {
 			setTimeout(() => {
 				this.trimCooldown.delete(ch)
 				this.trimCooldownTimers.delete(ch)
-			}, 300),
+			}, 1000),
 		)
 		this.emit('send', ChannelCommands.InputTrim(ch), newTrim)
 		this.logger?.debug(`GainComp: ch${ch} Δgain=${delta.toFixed(2)}dB → trim=${newTrim.toFixed(2)}dB`)
