@@ -692,6 +692,20 @@ export function getWidthCommand(sel: string): string {
 	return ''
 }
 
+export function getTrimCommand(sel: string): string {
+	const num = getNodeNumberFromID(sel)
+	if (sel.startsWith('/ch')) return ChannelCommands.InputTrim(num)
+	if (sel.startsWith('/aux')) return AuxCommands.InputTrim(num)
+	return ''
+}
+
+export function getPhantomPowerCommand(sel: string): string {
+	const num = getNodeNumberFromID(sel)
+	if (sel.startsWith('/ch')) return ChannelCommands.InputPhantomPower(num)
+	if (sel.startsWith('/aux')) return AuxCommands.InputPhantomPower(num)
+	return ''
+}
+
 export function getSendModeCommand(src: string, dest: string): string {
 	const srcNum = getNodeNumberFromID(src)
 	const destNum = getNodeNumberFromID(dest)

@@ -28,6 +28,7 @@ import { StateUtil } from '../state/index.js'
 import { FadeDurationChoice } from '../choices/fades.js'
 import { getIdLabelPair } from '../choices/utils.js'
 import { getSourceGroupChoices } from '../choices/common.js'
+import { MuteGroupCommands } from '../commands/mutegroup.js'
 
 export enum CommonActions {
 	// Setup
@@ -95,6 +96,20 @@ export enum CommonActions {
 	SetWidth = 'set-width',
 	DeltaWidth = 'delta-width',
 	SetSendMode = 'set-send-mode',
+
+	// Trim
+	SetTrim = 'set-trim',
+	AdjustTrim = 'adjust-trim',
+	ResetTrim = 'reset-trim',
+
+	// Phantom power
+	SetPhantomPower = 'set-phantom-power',
+
+	// Mute groups
+	ReleaseAllMuteGroups = 'release-all-mute-groups',
+
+	// Reset
+	ResetChannel = 'reset-channel',
 }
 
 export function createCommonActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
@@ -1216,6 +1231,175 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 				const dest = ActionUtil.getStringWithVariables(event, 'dest')
 				const cmd = ActionUtil.getSendModeCommand(src, dest)
 				if (cmd) ensureLoaded(cmd)
+			},
+		},
+
+		////////////////////////////////////////////////////////////////
+		// Trim
+		////////////////////////////////////////////////////////////////
+
+		[CommonActions.SetTrim]: {
+			name: 'Set Input Trim',
+			description: 'Set the input trim of a channel or aux strip.',
+			options: [
+				...GetDropdownWithVariables('Strip', 'sel', [...state.namedChoices.channels, ...state.namedChoices.auxes]),
+				...GetNumberFieldWithVariables('Trim (dB)', 'trim', -18, 18, 0.5, 0, 'dB, range -18..18'),
+				...FadeDurationChoice(),
+			],
+			callback: async (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const trim = ActionUtil.getNumberWithVariables(event, 'trim')
+				const cmd = ActionUtil.getTrimCommand(sel)
+				if (!cmd) return
+				runTransition(cmd, 'trim', event, state, transitions, trim, false)
+			},
+			subscribe: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getTrimCommand(sel)
+				if (cmd) ensureLoaded(cmd)
+			},
+		},
+
+		[CommonActions.AdjustTrim]: {
+			name: 'Adjust Input Trim (Relative)',
+			description: 'Nudge the input trim up or down by a step.',
+			options: [
+				...GetDropdownWithVariables('Strip', 'sel', [...state.namedChoices.channels, ...state.namedChoices.auxes]),
+				...GetNumberFieldWithVariables(
+					'Step (dB)',
+					'step',
+					-36,
+					36,
+					0.5,
+					1,
+					'Positive = increase, negative = decrease',
+				),
+			],
+			callback: async (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const step = ActionUtil.getNumberWithVariables(event, 'step')
+				const cmd = ActionUtil.getTrimCommand(sel)
+				if (!cmd) return
+				const current = StateUtil.getNumberFromState(cmd, state) ?? 0
+				const newVal = Math.max(-18, Math.min(18, current + step))
+				await send(cmd, newVal)
+				state.set(cmd, [{ type: 'f', value: newVal }])
+			},
+			subscribe: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getTrimCommand(sel)
+				if (cmd) ensureLoaded(cmd)
+			},
+		},
+
+		[CommonActions.ResetTrim]: {
+			name: 'Reset Input Trim',
+			description: 'Reset the input trim of a channel or aux strip to 0 dB.',
+			options: [
+				...GetDropdownWithVariables('Strip', 'sel', [...state.namedChoices.channels, ...state.namedChoices.auxes]),
+			],
+			callback: async (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getTrimCommand(sel)
+				if (!cmd) return
+				await send(cmd, 0)
+				state.set(cmd, [{ type: 'f', value: 0 }])
+			},
+			subscribe: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getTrimCommand(sel)
+				if (cmd) ensureLoaded(cmd)
+			},
+		},
+
+		////////////////////////////////////////////////////////////////
+		// Mute groups
+		////////////////////////////////////////////////////////////////
+
+		[CommonActions.SetPhantomPower]: {
+			name: 'Set Phantom Power',
+			description: 'Enable, disable, or toggle phantom power (+48V) on a channel or aux strip.',
+			options: [
+				...GetDropdownWithVariables('Strip', 'sel', [...state.namedChoices.channels, ...state.namedChoices.auxes]),
+				...GetOnOffToggleDropdownWithVariables('phantom', 'Phantom Power', true),
+			],
+			callback: async (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const val = ActionUtil.getNumberWithVariables(event, 'phantom')
+				const cmd = ActionUtil.getPhantomPowerCommand(sel)
+				if (!cmd) return
+				if (val === -1) {
+					const current = StateUtil.getBooleanFromState(cmd, state)
+					await send(cmd, Number(!current))
+					state.set(cmd, [{ type: 'i', value: Number(!current) }])
+				} else {
+					await send(cmd, val)
+					state.set(cmd, [{ type: 'i', value: val }])
+				}
+			},
+			subscribe: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getPhantomPowerCommand(sel)
+				if (cmd) ensureLoaded(cmd)
+			},
+		},
+
+		[CommonActions.ReleaseAllMuteGroups]: {
+			name: 'Release All Mute Groups',
+			description: 'Unmute all mute groups (1-8) simultaneously.',
+			options: [],
+			callback: async (_event) => {
+				for (let i = 1; i <= 8; i++) {
+					const cmd = MuteGroupCommands.Mute(i)
+					await send(cmd, 0)
+					state.set(cmd, [{ type: 'i', value: 0 }])
+				}
+			},
+		},
+
+		////////////////////////////////////////////////////////////////
+		// Reset channel
+		////////////////////////////////////////////////////////////////
+
+		[CommonActions.ResetChannel]: {
+			name: 'Reset Channel',
+			description: 'Cut fader, unmute, zero trim, center pan, and reset width in one action.',
+			options: [
+				...GetDropdownWithVariables('Strip', 'sel', [...state.namedChoices.channels, ...state.namedChoices.auxes]),
+			],
+			callback: async (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const num = ActionUtil.getNodeNumberFromID(sel)
+
+				const faderCmd = ActionUtil.getFaderCommand(sel, num)
+				if (faderCmd) {
+					await send(faderCmd, -144)
+					state.set(faderCmd, [{ type: 'f', value: -144 }])
+				}
+
+				const muteCmd = ActionUtil.getMuteCommand(sel, num)
+				if (muteCmd) {
+					await send(muteCmd, 0)
+					state.set(muteCmd, [{ type: 'i', value: 0 }])
+				}
+
+				const trimCmd = ActionUtil.getTrimCommand(sel)
+				if (trimCmd) {
+					await send(trimCmd, 0)
+					state.set(trimCmd, [{ type: 'f', value: 0 }])
+				}
+
+				const panCmd = ActionUtil.getPanoramaCommand(sel, num)
+				if (panCmd) {
+					await send(panCmd, 0)
+					state.set(panCmd, [{ type: 'f', value: 0 }])
+				}
+
+				const widthCmd = ActionUtil.getWidthCommand(sel)
+				if (widthCmd) {
+					await send(widthCmd, 0)
+					state.set(widthCmd, [{ type: 'f', value: 0 }])
+				}
 			},
 		},
 	}

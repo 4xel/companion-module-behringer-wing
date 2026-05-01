@@ -23,6 +23,11 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`ch${i}-sof-button`] = getSofPresets('ch', i)
 		presets[`ch${i}-phase-invert`] = getPhaseInvertPreset('ch', i)
 		presets[`ch${i}-width-knob`] = getWidthKnobPreset('ch', i)
+		presets[`ch${i}-trim-reset`] = getTrimResetPreset('ch', i)
+		presets[`ch${i}-nominal`] = getFaderPreset('ch', i, 0, 'Nominal')
+		presets[`ch${i}-cut`] = getFaderPreset('ch', i, -144, 'Cut')
+		presets[`ch${i}-phantom`] = getPhantomPreset('ch', i)
+		presets[`ch${i}-reset`] = getChannelResetPreset('ch', i)
 	}
 
 	for (let i = 1; i <= model.busses; i++) {
@@ -36,33 +41,67 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`aux${i}-solo-button`] = getSoloPreset('aux', i)
 		presets[`aux${i}-boost-and-center-button`] = getBoostAndCenterPreset('aux', i)
 		presets[`aux${i}-sof-button`] = getSofPresets('aux', i)
+		presets[`aux${i}-trim-reset`] = getTrimResetPreset('aux', i)
+		presets[`aux${i}-nominal`] = getFaderPreset('aux', i, 0, 'Nominal')
+		presets[`aux${i}-cut`] = getFaderPreset('aux', i, -144, 'Cut')
+		presets[`aux${i}-phantom`] = getPhantomPreset('aux', i)
+		presets[`aux${i}-reset`] = getChannelResetPreset('aux', i)
 	}
 
 	for (let i = 1; i <= model.busses; i++) {
 		presets[`bus${i}-mute-button`] = getMutePreset('bus', i)
 		presets[`bus${i}-solo-button`] = getSoloPreset('bus', i)
 		presets[`bus${i}-sof-button`] = getSofPresets('bus', i)
+		presets[`bus${i}-nominal`] = getFaderPreset('bus', i, 0, 'Nominal')
+		presets[`bus${i}-cut`] = getFaderPreset('bus', i, -144, 'Cut')
 	}
 
 	for (let i = 1; i <= model.matrices; i++) {
 		presets[`mtx${i}-mute-button`] = getMutePreset('mtx', i)
 		presets[`mtx${i}-solo-button`] = getSoloPreset('mtx', i)
 		presets[`mtx${i}-sof-button`] = getSofPresets('mtx', i)
+		presets[`mtx${i}-nominal`] = getFaderPreset('mtx', i, 0, 'Nominal')
+		presets[`mtx${i}-cut`] = getFaderPreset('mtx', i, -144, 'Cut')
 	}
 
 	for (let i = 1; i <= model.mains; i++) {
 		presets[`main${i}-mute-button`] = getMutePreset('main', i)
 		presets[`main${i}-solo-button`] = getSoloPreset('main', i)
 		presets[`main${i}-sof-button`] = getSofPresets('main', i)
+		presets[`main${i}-nominal`] = getFaderPreset('main', i, 0, 'Nominal')
+		presets[`main${i}-cut`] = getFaderPreset('main', i, -144, 'Cut')
 	}
 
 	for (let i = 1; i <= model.dcas; i++) {
 		presets[`dca${i}-mute-button`] = getMutePreset('dca', i)
 		presets[`dca${i}-solo-button`] = getSoloPreset('dca', i)
+		presets[`dca${i}-nominal`] = getFaderPreset('dca', i, 0, 'Nominal')
+		presets[`dca${i}-cut`] = getFaderPreset('dca', i, -144, 'Cut')
+		presets[`dca${i}-momentary-mute`] = getDcaMomentaryMutePreset(i)
 	}
+
+	for (let i = 1; i <= model.mutegroups; i++) {
+		presets[`mgrp${i}-toggle`] = getMuteGroupTogglePreset(i)
+		presets[`mgrp${i}-momentary`] = getMuteGroupMomentaryPreset(i)
+	}
+	presets['mgrp-release-all'] = getMuteGroupReleaseAllPreset()
 
 	presets[`talkback-a-button`] = getTalkbackPreset('A')
 	presets[`talkback-b-button`] = getTalkbackPreset('B')
+	presets['talkback-a-latch'] = getTalkbackLatchPreset('A')
+	presets['talkback-b-latch'] = getTalkbackLatchPreset('B')
+
+	presets['stat-aes50-a'] = getAes50StatusPreset('A')
+	presets['stat-aes50-b'] = getAes50StatusPreset('B')
+	presets['stat-aes50-c'] = getAes50StatusPreset('C')
+	presets['stat-solo-clear'] = getSoloClearPreset()
+
+	presets['scene-prev'] = getSceneStepPreset('PREV')
+	presets['scene-next'] = getSceneStepPreset('NEXT')
+	presets['scene-status'] = getSceneStatusPreset()
+	for (let i = 1; i <= 16; i++) {
+		presets[`scene-direct-${i}`] = getSceneDirectPreset(i)
+	}
 
 	for (let i = 1; i <= model.effects; i++) {
 		presets[`fx${i}-bypass-button`] = getFxBypassPreset(i)
@@ -920,6 +959,353 @@ function getSofPresets(base: string, val: number): CompanionButtonPresetDefiniti
 				style: {
 					bgcolor: combineRgb(255, 165, 0),
 				},
+			},
+		],
+	}
+}
+
+////////////////////////////////////////////////////////////////
+// Trim presets
+////////////////////////////////////////////////////////////////
+
+function getTrimResetPreset(base: string, num: number): CompanionButtonPresetDefinition {
+	const path = `/${base}/${num}`
+	return {
+		name: `${base.toUpperCase()}${num} Trim Reset`,
+		category: 'Input Processing',
+		type: 'button',
+		style: {
+			text: `${base.toUpperCase()}${num}\nTrim\nReset`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(60, 40, 0),
+		},
+		steps: [{ down: [{ actionId: CommonActions.ResetTrim, options: { sel: path } }], up: [] }],
+		feedbacks: [],
+	}
+}
+
+////////////////////////////////////////////////////////////////
+// Mute group presets
+////////////////////////////////////////////////////////////////
+
+function getMuteGroupTogglePreset(n: number): CompanionButtonPresetDefinition {
+	const path = `/mgrp/${n}`
+	return {
+		name: `Mute Group ${n} Toggle`,
+		category: 'Mute Groups',
+		type: 'button',
+		style: {
+			text: `MG${n}`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 0, 0),
+		},
+		steps: [{ down: [{ actionId: CommonActions.SetMute, options: { sel: path, mute: -1 } }], up: [] }],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.Mute,
+				options: { sel: path, mute: 1 },
+				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(255, 0, 0) },
+			},
+		],
+	}
+}
+
+function getMuteGroupMomentaryPreset(n: number): CompanionButtonPresetDefinition {
+	const path = `/mgrp/${n}`
+	return {
+		name: `Mute Group ${n} Momentary`,
+		category: 'Mute Groups',
+		type: 'button',
+		style: {
+			text: `MG${n}\nHold`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(60, 0, 0),
+		},
+		steps: [
+			{
+				down: [{ actionId: CommonActions.SetMute, options: { sel: path, mute: 1 } }],
+				up: [{ actionId: CommonActions.SetMute, options: { sel: path, mute: 0 } }],
+			},
+		],
+		feedbacks: [],
+	}
+}
+
+function getMuteGroupReleaseAllPreset(): CompanionButtonPresetDefinition {
+	return {
+		name: 'Release All Mute Groups',
+		category: 'Mute Groups',
+		type: 'button',
+		style: {
+			text: 'Release\nAll MG',
+			size: 'auto',
+			color: combineRgb(0, 0, 0),
+			bgcolor: combineRgb(255, 200, 0),
+		},
+		steps: [{ down: [{ actionId: CommonActions.ReleaseAllMuteGroups, options: {} }], up: [] }],
+		feedbacks: [],
+	}
+}
+
+////////////////////////////////////////////////////////////////
+// Fader presets
+////////////////////////////////////////////////////////////////
+
+function getFaderPreset(base: string, num: number, targetDb: number, label: string): CompanionButtonPresetDefinition {
+	const path = `/${base}/${num}`
+	const BASE = base.toUpperCase()
+	return {
+		name: `${BASE}${num} Fader ${label}`,
+		category: 'Fader',
+		type: 'button',
+		style: {
+			text: `${BASE}${num}\n${label}`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: targetDb === 0 ? combineRgb(0, 0, 100) : combineRgb(40, 40, 40),
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: CommonActions.SetFader,
+						options: { sel: path, level: targetDb, level_use_variables: false, fadeDuration: 0 },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+}
+
+function getDcaMomentaryMutePreset(n: number): CompanionButtonPresetDefinition {
+	const path = `/dca/${n}`
+	return {
+		name: `DCA${n} Momentary Mute`,
+		category: 'DCA',
+		type: 'button',
+		style: {
+			text: `DCA${n}\nHold`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(60, 0, 80),
+		},
+		steps: [
+			{
+				down: [{ actionId: CommonActions.SetMute, options: { sel: path, mute: 1 } }],
+				up: [{ actionId: CommonActions.SetMute, options: { sel: path, mute: 0 } }],
+			},
+		],
+		feedbacks: [],
+	}
+}
+
+////////////////////////////////////////////////////////////////
+// Phantom power preset
+////////////////////////////////////////////////////////////////
+
+function getPhantomPreset(base: string, num: number): CompanionButtonPresetDefinition {
+	const path = `/${base}/${num}`
+	const name = `${base.toUpperCase()}${num}`
+	return {
+		name: `${name} Phantom Power`,
+		category: 'Input Processing',
+		type: 'button',
+		style: {
+			text: `${name}\nΦ48V`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 0, 0),
+		},
+		steps: [{ down: [{ actionId: CommonActions.SetPhantomPower, options: { sel: path, phantom: -1 } }], up: [] }],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.PhantomPower,
+				options: { sel: path, sel_use_variables: false },
+				style: { color: combineRgb(0, 0, 0), bgcolor: combineRgb(255, 140, 0) },
+			},
+		],
+	}
+}
+
+////////////////////////////////////////////////////////////////
+// Channel reset preset
+////////////////////////////////////////////////////////////////
+
+function getChannelResetPreset(base: string, num: number): CompanionButtonPresetDefinition {
+	const path = `/${base}/${num}`
+	const name = `${base.toUpperCase()}${num}`
+	return {
+		name: `${name} Reset`,
+		category: 'Channel Strip',
+		type: 'button',
+		style: {
+			text: `${name}\nReset`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(80, 0, 0),
+		},
+		steps: [{ down: [{ actionId: CommonActions.ResetChannel, options: { sel: path } }], up: [] }],
+		feedbacks: [],
+	}
+}
+
+////////////////////////////////////////////////////////////////
+// Talkback latch presets
+////////////////////////////////////////////////////////////////
+
+function getTalkbackLatchPreset(bus: 'A' | 'B'): CompanionButtonPresetDefinition {
+	return {
+		name: `Talkback ${bus} Latch`,
+		category: 'Talkback',
+		type: 'button',
+		style: {
+			text: `Talk ${bus}\nLatch`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 0, 0),
+		},
+		steps: [
+			{
+				down: [{ actionId: ConfigActions.TalkbackOn, options: { tb: bus, solo: -1 } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.Talkback,
+				options: { tb: bus, on: '1' },
+				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 200) },
+			},
+		],
+	}
+}
+
+////////////////////////////////////////////////////////////////
+// AES50 status and solo-clear presets
+////////////////////////////////////////////////////////////////
+
+function getAes50StatusPreset(port: 'A' | 'B' | 'C'): CompanionButtonPresetDefinition {
+	return {
+		name: `AES50 ${port} Status`,
+		category: 'Console Status',
+		type: 'button',
+		style: {
+			text: `AES50 ${port}`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(30, 30, 30),
+		},
+		steps: [{ down: [], up: [] }],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.AesStatus,
+				options: { aes: port, aes_use_variables: false, status: 'OK', status_use_variables: false },
+				style: { color: combineRgb(0, 0, 0), bgcolor: combineRgb(0, 200, 0) },
+			},
+			{
+				feedbackId: FeedbackId.AesStatus,
+				options: { aes: port, aes_use_variables: false, status: 'ERR', status_use_variables: false },
+				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(200, 0, 0) },
+			},
+		],
+	}
+}
+
+function getSoloClearPreset(): CompanionButtonPresetDefinition {
+	return {
+		name: 'Clear Solo',
+		category: 'Console Status',
+		type: 'button',
+		style: {
+			text: 'Clear\nSolo',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 0, 0),
+		},
+		steps: [{ down: [{ actionId: CommonActions.ClearSolo, options: {} }], up: [] }],
+		feedbacks: [],
+	}
+}
+
+////////////////////////////////////////////////////////////////
+// Scene presets
+////////////////////////////////////////////////////////////////
+
+function getSceneStepPreset(dir: 'PREV' | 'NEXT'): CompanionButtonPresetDefinition {
+	const label = dir === 'PREV' ? '◀ Prev' : 'Next ▶'
+	return {
+		name: `Scene ${dir === 'PREV' ? 'Previous' : 'Next'}`,
+		category: 'Scene',
+		type: 'button',
+		style: {
+			text: label,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 60, 120),
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: OtherActionId.SendLibraryAction,
+						options: { act: `GO${dir}`, act_use_variables: false },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+}
+
+function getSceneStatusPreset(): CompanionButtonPresetDefinition {
+	return {
+		name: 'Scene Status',
+		category: 'Scene',
+		type: 'button',
+		style: {
+			text: `Scene\n$(wing:active_scene_number)\n$(wing:active_scene_name)`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(30, 30, 60),
+		},
+		steps: [{ down: [], up: [] }],
+		feedbacks: [],
+	}
+}
+
+function getSceneDirectPreset(i: number): CompanionButtonPresetDefinition {
+	return {
+		name: `Scene ${i} Direct Recall`,
+		category: 'Scene',
+		type: 'button',
+		style: {
+			text: `Scene\n${i}`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 0, 0),
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: OtherActionId.RecallSceneByNumber,
+						options: { sceneId: i, sceneId_use_variables: false },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.ActiveScene,
+				options: { scene: String(i) },
+				style: { color: combineRgb(0, 0, 0), bgcolor: combineRgb(0, 220, 0) },
 			},
 		],
 	}

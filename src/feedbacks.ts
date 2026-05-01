@@ -58,6 +58,7 @@ export enum FeedbackId {
 	FxInsertOn = 'fx-insert-on',
 	PhaseInvert = 'phase-invert',
 	SendMode = 'send-mode',
+	PhantomPower = 'phantom-power',
 }
 
 function subscribeFeedback(
@@ -795,6 +796,36 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 				const src = ActionUtil.getStringWithVariables(event, 'src')
 				const dest = ActionUtil.getStringWithVariables(event, 'dest')
 				const cmd = ActionUtil.getSendModeCommand(src, dest)
+				if (cmd) unsubscribeFeedback(subs, cmd, event)
+			},
+		},
+
+		[FeedbackId.PhantomPower]: {
+			type: 'boolean',
+			name: 'Phantom Power Active',
+			description: 'Active when phantom power (+48V) is enabled on a channel or aux strip.',
+			defaultStyle: {
+				color: combineRgb(0, 0, 0),
+				bgcolor: combineRgb(255, 140, 0),
+			},
+			options: [
+				...GetDropdownWithVariables('Strip', 'sel', [...state.namedChoices.channels, ...state.namedChoices.auxes]),
+			],
+			callback: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getPhantomPowerCommand(sel)
+				if (!cmd) return false
+				const val = StateUtil.getNumberFromState(cmd, state)
+				return val === 1
+			},
+			subscribe: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getPhantomPowerCommand(sel)
+				if (cmd) subscribeFeedback(ensureLoaded, subs, cmd, event)
+			},
+			unsubscribe: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getPhantomPowerCommand(sel)
 				if (cmd) unsubscribeFeedback(subs, cmd, event)
 			},
 		},

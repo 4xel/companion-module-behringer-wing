@@ -74,11 +74,15 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Channel | Set Channel Process Order | Set the process order of EQ, gate, dynamics and insert of a channel. |
 | Common | Adjust Fader Level | Adjust the level of a channel, aux, bus, dca, matrix or main. |
 | Common | Adjust Gain | Adjust the input gain of a channel or aux. |
+| Common | Adjust Input Trim (Relative) | Nudge the input trim up or down by a step. |
 | Common | Adjust Panorama | Adjust the panorama of a channel, aux, bus, matrix or main. |
 | Common | Adjust Send Level | Adjust the send level from a destination channel strip to a source |
 | Common | Adjust Send Panorama | Adjust the panorama of a send from a channel or aux to a bus or matrix. |
 | Common | Adjust Stereo Width (Relative) | Nudge the stereo width up or down. Use with encoder knobs on StreamDeck+. |
 | Common | Clear Solo | Clear the Solo from all channels, auxes, busses, matrices and mains. |
+| Common | Release All Mute Groups | Unmute all mute groups (1-8) simultaneously. |
+| Common | Reset Channel | Cut fader, unmute, zero trim, center pan, and reset width in one action. |
+| Common | Reset Input Trim | Reset the input trim of a channel or aux strip to 0 dB. |
 | Common | Restore Gain | Restore the gain of a channel or aux. |
 | Common | Restore Level | Restore the fader level of a channel, aux, bus, dca, matrix or main. |
 | Common | Restore Panorama | Restore the panorama of a channel, aux, bus, matrix or main. |
@@ -95,11 +99,13 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Common | Set EQ On | Enable, disable or toggle the on-state of an EQ on a channel, bus, aux, matrix or main. |
 | Common | Set Gain | Set the input gain of a channel or aux. |
 | Common | Set Gate On | Enable, disable or toggle the on-state of a gate on a channel |
+| Common | Set Input Trim | Set the input trim of a channel or aux strip. |
 | Common | Set Insert On | Enable or disable an insert for a channel, aux, bus, matrix or main. |
 | Common | Set Level | Set the fader level of a channel, aux, bus, dca, matrix or main to a value. |
 | Common | Set Mute | Set or toggle the mute state of a channel, aux, bus, dca, matrix or main. |
 | Common | Set Name | Set the name of a channel, aux, bus, dca, matrix, main, or a mutegroup. |
 | Common | Set Panorama | Set the panorama of a channel, aux, bus, matrix or main. |
+| Common | Set Phantom Power | Enable, disable, or toggle phantom power (+48V) on a channel or aux strip. |
 | Common | Set Phase Invert | Flip the polarity of a channel or strip input. Useful for mic phase alignment during soundcheck. |
 | Common | Set Scribble Light | Set or toggle the scribble light state of a channel, aux, bus, dca, matrix, or main. |
 | Common | Set Scribble Light Color | Set the scribble light color of a channel, aux, bus, dca, matrix, or main. |
