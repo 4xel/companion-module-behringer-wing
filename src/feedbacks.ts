@@ -84,8 +84,15 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 	if (!state) throw new Error('State handler or state is not available')
 	const subs = _self.feedbackHandler?.subscriptions
 	if (!subs) throw new Error('Feedback handler or subscriptions are not available')
-	const ensureLoaded = _self.stateHandler?.ensureLoaded.bind(_self.stateHandler)
-	if (!ensureLoaded) throw new Error('State handler or ensureLoaded is not available')
+	// Feedback subscriptions use fire-and-forget sendCommand instead of the
+	// queued ensureLoaded. ensureLoaded has a user-configurable timeout (default
+	// 200ms, but some users set 20ms) that causes timeout errors and orphaned
+	// async frames when Wing doesn't respond within that window. sendCommand is
+	// fire-and-forget: Wing responds when ready, state updates, feedbacks refresh.
+	const ensureLoaded = (path: string): void => {
+		_self.connection?.sendCommand(path).catch(() => {})
+	}
+	if (!_self.connection) throw new Error('Connection is not available')
 	const allChannels = [
 		...state.namedChoices.channels,
 		...state.namedChoices.auxes,
