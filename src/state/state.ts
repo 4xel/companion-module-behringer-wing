@@ -247,6 +247,41 @@ export class WingState implements IStoredChannelSubject {
 		for (let fx = 1; fx <= model.effects; fx++) {
 			void sendCommand(Commands.Effect.Model(fx))
 		}
+
+		// Always query key per-channel variables so they're live from startup
+		// without requiring prefetchVariablesOnStartup to be enabled.
+		setTimeout(() => {
+			for (let ch = 1; ch <= model.channels; ch++) {
+				void sendCommand(Commands.Channel.InputGain(ch))
+				void sendCommand(Commands.Channel.InputTrim(ch))
+				void sendCommand(Commands.Channel.InputInvert(ch))
+				void sendCommand(Commands.Channel.Width(ch))
+				void sendCommand(Commands.Channel.Mute(ch))
+				void sendCommand(Commands.Channel.Fader(ch))
+				void sendCommand(Commands.Channel.Pan(ch))
+				void sendCommand(Commands.Channel.Color(ch))
+				void sendCommand(Commands.Channel.InputAltSource(ch))
+			}
+			for (let aux = 1; aux <= model.auxes; aux++) {
+				void sendCommand(Commands.Aux.InputGain(aux))
+				void sendCommand(Commands.Aux.InputTrim(aux))
+				void sendCommand(Commands.Aux.InputInvert(aux))
+				void sendCommand(Commands.Aux.Width(aux))
+				void sendCommand(Commands.Aux.Mute(aux))
+				void sendCommand(Commands.Aux.Fader(aux))
+				void sendCommand(Commands.Aux.Pan(aux))
+				void sendCommand(Commands.Aux.InputAltSource(aux))
+			}
+			for (let bus = 1; bus <= model.busses; bus++) {
+				void sendCommand(Commands.Bus.Mute(bus))
+				void sendCommand(Commands.Bus.Fader(bus))
+				void sendCommand(Commands.Bus.Pan(bus))
+			}
+			for (let dca = 1; dca <= model.dcas; dca++) {
+				void sendCommand(Commands.Dca.Mute(dca))
+				void sendCommand(Commands.Dca.Fader(dca))
+			}
+		}, 200) // slight delay so name queries don't compete on startup
 	}
 
 	public async requestAllVariables(self: WingInstance): Promise<void> {
