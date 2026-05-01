@@ -409,7 +409,7 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 			description: 'Adjust the input gain of a channel or aux.',
 			options: [
 				...GetDropdownWithVariables('Selection', 'sel', allChannels),
-				...GetNumberFieldWithVariables('Gain (dB)', 'gain', -48.5, 48.5, 0.5, 0),
+				...GetNumberFieldWithVariables('Gain (dB)', 'gain', -48.5, 48.5, 0.5, 1),
 				...FadeDurationChoice(),
 			],
 			callback: async (event) => {
