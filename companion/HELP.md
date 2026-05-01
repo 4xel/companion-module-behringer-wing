@@ -101,6 +101,7 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Common | Set EQ On | Enable, disable or toggle the on-state of an EQ on a channel, bus, aux, matrix or main. |
 | Common | Set Gain | Set the input gain of a channel or aux. |
 | Common | Set Gate On | Enable, disable or toggle the on-state of a gate on a channel |
+| Common | Set Global Main/Alt Input | Switch all channels between their Main and Alt input sources globally via /io/altsw. |
 | Common | Set Input Trim | Set the input trim of a channel or aux strip. |
 | Common | Set Insert On | Enable or disable an insert for a channel, aux, bus, matrix or main. |
 | Common | Set Level | Set the fader level of a channel, aux, bus, dca, matrix or main to a value. |

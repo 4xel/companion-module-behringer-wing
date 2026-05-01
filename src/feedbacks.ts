@@ -59,6 +59,7 @@ export enum FeedbackId {
 	PhaseInvert = 'phase-invert',
 	SendMode = 'send-mode',
 	PhantomPower = 'phantom-power',
+	ChannelAltSource = 'channel-alt-source',
 	GainCompActive = 'gain-comp-active',
 	GainCompManualActive = 'gain-comp-manual-active',
 	GainCompSnapshotExists = 'gain-comp-snapshot-exists',
@@ -202,6 +203,34 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 				unsubscribeFeedback(subs, cmd, event)
 			},
 		},
+
+		[FeedbackId.ChannelAltSource]: {
+			type: 'boolean',
+			name: 'Channel/Aux on Alt Input',
+			description: 'Active when a channel or aux is switched to its Alt input source.',
+			defaultStyle: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(180, 80, 0) },
+			options: [
+				...GetDropdownWithVariables('Channel', 'sel', [...state.namedChoices.channels, ...state.namedChoices.auxes]),
+			],
+			callback: (event: CompanionFeedbackInfo): boolean => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getInputAltSourceCommand(sel)
+				if (!cmd) return false
+				const val = StateUtil.getNumberFromState(cmd, state)
+				return val === 1
+			},
+			subscribe: async (event): Promise<void> => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getInputAltSourceCommand(sel)
+				if (cmd) subscribeFeedback(ensureLoaded, subs, cmd, event)
+			},
+			unsubscribe: (event: CompanionFeedbackInfo): void => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const cmd = ActionUtil.getInputAltSourceCommand(sel)
+				if (cmd) unsubscribeFeedback(subs, cmd, event)
+			},
+		},
+
 		[FeedbackId.Mute]: {
 			type: 'boolean',
 			name: 'Mute',

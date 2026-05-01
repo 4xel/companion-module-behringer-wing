@@ -559,6 +559,15 @@ export class VariableHandler extends EventEmitter {
 	}
 
 	private updateIoVariables(path: string, arg: OSCMetaArgument): VariableUpdate[] | undefined {
+		// Per-channel alt source: /ch/N/in/set/altsrc (0=Main, 1=Alt)
+		const chAltMatch = path.match(/^\/ch\/(\d+)\/in\/set\/altsrc$/)
+		if (chAltMatch) {
+			const ch = chAltMatch[1]
+			const raw = arg?.value
+			const isAlt = typeof raw === 'number' ? raw === 1 : String(raw).trim() === '1'
+			return [{ name: `ch${ch}_alt`, value: isAlt ? 'Alt' : 'Main' }]
+		}
+
 		const altsw = IoCommands.MainAltSwitch()
 		if (path !== altsw) return
 

@@ -83,6 +83,11 @@ export function getChannelVariables(model: ModelSpec): VariableDefinition[] {
 			name: `Channel ${ch} Color`,
 			path: Commands.Channel.Color(ch),
 		})
+		variables.push({
+			variableId: `ch${ch}_alt`,
+			name: `Channel ${ch} Input Source (Main/Alt)`,
+			path: Commands.Channel.InputAltSource(ch),
+		})
 	}
 
 	return variables

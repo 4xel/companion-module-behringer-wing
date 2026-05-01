@@ -29,6 +29,7 @@ import { FadeDurationChoice } from '../choices/fades.js'
 import { getIdLabelPair } from '../choices/utils.js'
 import { getSourceGroupChoices } from '../choices/common.js'
 import { MuteGroupCommands } from '../commands/mutegroup.js'
+import { IoCommands } from '../commands/io.js'
 
 export enum CommonActions {
 	// Setup
@@ -36,6 +37,7 @@ export enum CommonActions {
 	SetAltConnection = 'set-alt-connection',
 	SetAutoSourceSwitch = 'set-auto-source-switch',
 	SetMainAlt = 'set-main-alt',
+	SetGlobalMainAlt = 'set-global-main-alt',
 	SetScribbleLight = 'set-scribble-light',
 	SetScribbleLightColor = 'set-scribble-light-color',
 	SetName = 'set-name',
@@ -238,7 +240,38 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 				const cmd = ActionUtil.getInputAltSourceCommand(sel)
 				await send(cmd, mainAlt)
 			},
+			subscribe: (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'channel')
+				const cmd = ActionUtil.getInputAltSourceCommand(sel)
+				if (cmd) ensureLoaded(cmd)
+			},
 		},
+
+		[CommonActions.SetGlobalMainAlt]: {
+			name: 'Set Global Main/Alt Input',
+			description: 'Switch all channels between their Main and Alt input sources globally via /io/altsw.',
+			options: [
+				...GetDropdownWithVariables('Source', 'source', [
+					getIdLabelPair('0', 'Main (all channels to main input)'),
+					getIdLabelPair('1', 'Alt (all channels to alt input)'),
+					getIdLabelPair('-1', 'Toggle'),
+				]),
+			],
+			callback: async (event) => {
+				const source = ActionUtil.getNumberWithVariables(event, 'source')
+				const cmd = IoCommands.MainAltSwitch()
+				if (source === -1) {
+					const current = StateUtil.getNumberFromState(cmd, state)
+					await send(cmd, current === 0 ? 1 : 0)
+				} else {
+					await send(cmd, source)
+				}
+			},
+			subscribe: () => {
+				ensureLoaded(IoCommands.MainAltSwitch())
+			},
+		},
+
 		[CommonActions.SetScribbleLight]: {
 			name: 'Set Scribble Light',
 			description: 'Set or toggle the scribble light state of a channel, aux, bus, dca, matrix, or main.',

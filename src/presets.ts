@@ -16,7 +16,12 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		[id: string]: CompanionButtonPresetDefinition | undefined
 	} = {}
 
+	presets['global-main-input'] = getGlobalMainAltPreset(0, 'MAIN')
+	presets['global-alt-input'] = getGlobalMainAltPreset(1, 'ALT')
+	presets['global-main-alt-toggle'] = getGlobalMainAltTogglePreset()
+
 	for (let i = 1; i <= model.channels; i++) {
+		presets[`ch${i}-alt-source`] = getChannelAltSourcePreset('ch', i)
 		presets[`ch${i}-mute-button`] = getMutePreset('ch', i)
 		presets[`ch${i}-solo-button`] = getSoloPreset('ch', i)
 		presets[`ch${i}-boost-and-center-button`] = getBoostAndCenterPreset('ch', i)
@@ -143,6 +148,95 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 	presets[`lights-dark`] = getLightPresetDark()
 
 	return presets
+}
+
+function getGlobalMainAltPreset(source: 0 | 1, label: string): CompanionButtonPresetDefinition {
+	const isAlt = source === 1
+	return {
+		name: `Global Input: ${label}`,
+		category: 'Input Switching',
+		type: 'button',
+		style: {
+			text: `ALL\n${label}`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: isAlt ? combineRgb(160, 60, 0) : combineRgb(0, 80, 0),
+		},
+		steps: [
+			{
+				down: [{ actionId: CommonActions.SetGlobalMainAlt, options: { source: String(source) } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.MainAltSwitch,
+				options: { sel: isAlt ? '0' : '1' },
+				style: { bgcolor: isAlt ? combineRgb(220, 100, 0) : combineRgb(0, 160, 0) },
+			},
+		],
+	}
+}
+
+function getGlobalMainAltTogglePreset(): CompanionButtonPresetDefinition {
+	return {
+		name: 'Global Input: Toggle',
+		category: 'Input Switching',
+		type: 'button',
+		style: {
+			text: `ALL\n$(wing:main_alt_status)`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(40, 40, 40),
+		},
+		steps: [
+			{
+				down: [{ actionId: CommonActions.SetGlobalMainAlt, options: { source: '-1' } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.MainAltSwitch,
+				options: { sel: '0' },
+				style: { bgcolor: combineRgb(0, 160, 0) },
+			},
+			{
+				feedbackId: FeedbackId.MainAltSwitch,
+				options: { sel: '1' },
+				style: { bgcolor: combineRgb(220, 100, 0) },
+			},
+		],
+	}
+}
+
+function getChannelAltSourcePreset(base: string, num: number): CompanionButtonPresetDefinition {
+	const path = `/${base}/${num}`
+	const name = `${base.toUpperCase()}${num}`
+	return {
+		name: `${name} Alt Source Toggle`,
+		category: 'Input Switching',
+		type: 'button',
+		style: {
+			text: `${name}\n$(wing:${base}${num}_alt)`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 0, 0),
+		},
+		steps: [
+			{
+				down: [{ actionId: CommonActions.SetMainAlt, options: { channel: path, main_alt: '-1' } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.ChannelAltSource,
+				options: { sel: path },
+				style: { bgcolor: combineRgb(200, 80, 0), color: combineRgb(255, 255, 255) },
+			},
+		],
+	}
 }
 
 function getMutePreset(base: string, val: number): CompanionButtonPresetDefinition {
