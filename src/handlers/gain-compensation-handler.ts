@@ -8,72 +8,61 @@ import { ChannelCommands } from '../commands/channel.js'
 const RE_GAIN = /^\/ch\/(\d+)\/in\/set\/\$g$/
 const RE_TRIM = /^\/ch\/(\d+)\/in\/set\/trim$/
 
-// Wing LCL/AES50 preamp: normalized 0..1 maps to -3..45.5 dB (98 steps)
-const GAIN_NORM_MIN = -3
-const GAIN_NORM_RANGE = 48.5
-
-// Trim: normalized 0..1 maps to -18..18 dB
-const TRIM_NORM_MIN = -18
-const TRIM_NORM_RANGE = 36
-
 const TRIM_MIN = -18
 const TRIM_MAX = 18
 const TRIM_TOLERANCE = 0.05
-const COMP_DEBOUNCE_MS = 300
-const COMP_GUARD_MS = 600
+const COMP_DEBOUNCE_MS = 200
 const SWEEP_MS = 5000
 
 interface ChannelRef {
-	gain: number // actual dB
-	trim: number // actual dB
+	gain: number
+	trim: number
 }
 
 /**
- * Convert any Wing OSC arg to actual dB for /ch/N/in/set/$g.
- * Wing sends either:
- *   - `,sff "5.5" 0.42 5.5`  (display string + normalized + actual) — full query response
- *   - `,f 0.42`               (normalized 0..1 only) — /*S push or minimal response
- * Accept both; convert normalized values using the known preamp range.
+ * Extract the actual-dB value from an OSC message's args array.
+ *
+ * Wing response format:
+ *   Full query (3 args): [display_string:s, normalized:f, actual_dB:f]
+ *   /*S push  (1 arg) : [actual_dB:f]   ← Wing sends actual dB, NOT normalized
+ *
+ * Matches the reference osc-gain-compensation extractValue() implementation.
  */
-function toGainDb(arg: osc.MetaArgument): number | undefined {
-	if (!arg) return undefined
-	if (arg.type === 's') {
-		const v = parseFloat(arg.value)
-		return isNaN(v) ? undefined : v
+function extractValue(args: osc.MetaArgument[]): number | null {
+	if (args.length === 0) return null
+	// For 3-arg full query responses, use args[2] (actual value).
+	// For single-value /*S pushes, use args[0] directly.
+	const raw = args.length >= 3 ? args[2].value : args[0].value
+	if (typeof raw === 'number' && !isNaN(raw)) return raw
+	if (typeof raw === 'string') {
+		const n = parseFloat(raw)
+		return isNaN(n) ? null : n
 	}
-	const raw = arg.value as number
-	if (typeof raw !== 'number' || isNaN(raw)) return undefined
-	// Normalized values are in [0, 1]; actual dB for LCL/AES50 preamps is −3..45.5.
-	// Values outside [0, 1] are already in actual dB.
-	if (raw >= 0 && raw <= 1) return raw * GAIN_NORM_RANGE + GAIN_NORM_MIN
-	return raw
-}
-
-function toTrimDb(arg: osc.MetaArgument): number | undefined {
-	if (!arg) return undefined
-	if (arg.type === 's') {
-		const v = parseFloat(arg.value)
-		return isNaN(v) ? undefined : v
-	}
-	const raw = arg.value as number
-	if (typeof raw !== 'number' || isNaN(raw)) return undefined
-	// Trim range is −18..18 dB normalized to 0..1.
-	// If value is outside [0, 1], it's already actual dB.
-	if (raw >= 0 && raw <= 1) return raw * TRIM_NORM_RANGE + TRIM_NORM_MIN
-	return raw
+	return null
 }
 
 export class GainCompensationHandler extends EventEmitter {
 	private enabled = false
 	private mode: 'auto' | 'manual' = 'auto'
 	private refs = new Map<number, ChannelRef>()
+
+	// Current observed values — actual dB, no normalization
 	private gainCache = new Map<number, number>()
 	private trimCache = new Map<number, number>()
+
 	private snapshotTakenAt?: Date
 	private snapshotTimer?: NodeJS.Timeout
-	private pendingSet = new Set<number>()
-	private pendingSetTimers = new Map<number, NodeJS.Timeout>()
+
+	// Stale-push guard: after writing trim, record the expected value.
+	// Ignore incoming trim pushes that don't match within tolerance (they are stale
+	// /*S pushes that arrived before Wing processed our command).
+	// Delete the entry when the Wing confirms our value (push matches expected).
+	private pendingSetTrim = new Map<number, number>()
+
+	// Per-channel debounce for reactive auto-compensation
 	private compDebounce = new Map<number, NodeJS.Timeout>()
+
+	// Background reconciliation sweep
 	private sweepTimer?: NodeJS.Timeout
 
 	constructor(
@@ -92,14 +81,17 @@ export class GainCompensationHandler extends EventEmitter {
 			const gainMatch = msg.address.match(RE_GAIN)
 			if (gainMatch) {
 				const ch = parseInt(gainMatch[1])
-				const db = toGainDb(args[0])
-				if (db !== undefined) {
-					this.gainCache.set(ch, db)
-					this.emitChannelVariables(ch)
-					// If auto comp is armed, schedule correction using the fresh value
-					if (this.enabled && this.mode === 'auto' && this.refs.has(ch) && !this.pendingSet.has(ch)) {
-						this.scheduleAutoComp(ch)
-					}
+				const gain = extractValue(args)
+				if (gain === null) continue
+
+				const prev = this.gainCache.get(ch)
+				if (prev === gain) continue // no change
+
+				this.gainCache.set(ch, gain)
+				this.emitChannelVariables(ch)
+
+				if (this.enabled && this.mode === 'auto' && this.refs.has(ch)) {
+					this.scheduleAutoComp(ch)
 				}
 				continue
 			}
@@ -107,11 +99,18 @@ export class GainCompensationHandler extends EventEmitter {
 			const trimMatch = msg.address.match(RE_TRIM)
 			if (trimMatch) {
 				const ch = parseInt(trimMatch[1])
-				const db = toTrimDb(args[0])
-				if (db !== undefined) {
-					this.trimCache.set(ch, db)
-					this.emitChannelVariables(ch)
+				const trim = extractValue(args)
+				if (trim === null) continue
+
+				// Stale-push guard: if we just wrote trim, check if Wing confirmed our value
+				const pending = this.pendingSetTrim.get(ch)
+				if (pending !== undefined) {
+					if (Math.abs(trim - pending) > TRIM_TOLERANCE) continue // stale — ignore
+					this.pendingSetTrim.delete(ch) // Wing confirmed our set
 				}
+
+				this.trimCache.set(ch, trim)
+				this.emitChannelVariables(ch)
 			}
 		}
 	}
@@ -120,12 +119,12 @@ export class GainCompensationHandler extends EventEmitter {
 
 	takeSnapshot(): void {
 		if (this.snapshotTimer) clearTimeout(this.snapshotTimer)
-		// Request fresh values; responses will feed processMessage → gainCache/trimCache
+		// Query all channels; responses come back through processMessage → gainCache/trimCache
 		for (let ch = 1; ch <= this.model.channels; ch++) {
 			this.emit('ensure-loaded', ChannelCommands.InputGain(ch))
 			this.emit('ensure-loaded', ChannelCommands.InputTrim(ch))
 		}
-		// Give the Wing time to respond — with concurrency 100 this is well within 1 s
+		// Capture refs after responses have arrived (stateHandler concurrency=100, ~200ms for 80 paths)
 		this.snapshotTimer = setTimeout(() => this.captureRefs(), 1500)
 	}
 
@@ -169,8 +168,8 @@ export class GainCompensationHandler extends EventEmitter {
 		const currentGain = this.gainCache.get(ch)
 		const currentTrim = this.trimCache.get(ch)
 		if (currentGain === undefined || currentTrim === undefined) return true
-		const expectedTrim = Math.max(TRIM_MIN, Math.min(TRIM_MAX, ref.trim - (currentGain - ref.gain)))
-		return Math.abs(currentTrim - expectedTrim) <= TRIM_TOLERANCE
+		const expected = Math.max(TRIM_MIN, Math.min(TRIM_MAX, ref.trim - (currentGain - ref.gain)))
+		return Math.abs(currentTrim - expected) <= TRIM_TOLERANCE
 	}
 
 	getCompDelta(ch: number): number | undefined {
@@ -183,7 +182,6 @@ export class GainCompensationHandler extends EventEmitter {
 	destroy(): void {
 		this.stopSweep()
 		this.clearCompDebounces()
-		this.clearPendingSetTimers()
 		if (this.snapshotTimer) clearTimeout(this.snapshotTimer)
 	}
 
@@ -226,8 +224,16 @@ export class GainCompensationHandler extends EventEmitter {
 		}
 		const delta = currentGain - ref.gain
 		if (Math.abs(delta) < 0.01) return
+
 		const newTrim = Math.max(TRIM_MIN, Math.min(TRIM_MAX, ref.trim - delta))
-		this.setPendingSet(ch)
+
+		// Record expected value for stale-push guard
+		this.pendingSetTrim.set(ch, newTrim)
+		setTimeout(() => {
+			if (this.pendingSetTrim.get(ch) === newTrim) this.pendingSetTrim.delete(ch)
+		}, 500)
+
+		// Update local cache immediately (Wing won't echo set commands)
 		this.trimCache.set(ch, newTrim)
 		this.emit('send', ChannelCommands.InputTrim(ch), newTrim)
 		this.logger?.debug(`GainComp: ch${ch} Δgain=${delta.toFixed(2)}dB → trim=${newTrim.toFixed(2)}dB`)
@@ -235,25 +241,12 @@ export class GainCompensationHandler extends EventEmitter {
 		this.emit('check-feedbacks', ['channel-needs-comp'])
 	}
 
-	private setPendingSet(ch: number): void {
-		this.pendingSet.add(ch)
-		const existing = this.pendingSetTimers.get(ch)
-		if (existing) clearTimeout(existing)
-		this.pendingSetTimers.set(
-			ch,
-			setTimeout(() => {
-				this.pendingSet.delete(ch)
-				this.pendingSetTimers.delete(ch)
-			}, COMP_GUARD_MS),
-		)
-	}
-
 	private startSweep(): void {
 		this.stopSweep()
 		this.sweepTimer = setInterval(() => {
 			if (!this.enabled || this.mode !== 'auto') return
 			for (let ch = 1; ch <= this.model.channels; ch++) {
-				if (!this.refs.has(ch) || this.pendingSet.has(ch)) continue
+				if (!this.refs.has(ch)) continue
 				if (!this.isChannelCompOk(ch)) {
 					this.logger?.debug(`GainComp sweep: ch${ch} needs correction`)
 					this.applyCompensationForChannel(ch)
@@ -272,12 +265,6 @@ export class GainCompensationHandler extends EventEmitter {
 	private clearCompDebounces(): void {
 		for (const t of this.compDebounce.values()) clearTimeout(t)
 		this.compDebounce.clear()
-	}
-
-	private clearPendingSetTimers(): void {
-		for (const t of this.pendingSetTimers.values()) clearTimeout(t)
-		this.pendingSetTimers.clear()
-		this.pendingSet.clear()
 	}
 
 	private emitGlobalVariables(): void {
