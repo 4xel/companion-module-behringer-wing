@@ -1,26 +1,15 @@
 import { ModelSpec } from '../models/types.js'
 import { VariableDefinition } from './index.js'
+import * as Commands from '../commands/index.js'
 
 export function getBusVariables(model: ModelSpec): VariableDefinition[] {
 	const variables: VariableDefinition[] = []
 
 	for (let bus = 1; bus <= model.busses; bus++) {
-		variables.push({
-			variableId: `bus${bus}_name`,
-			name: `Bus ${bus} Name`,
-		})
-		variables.push({
-			variableId: `bus${bus}_mute`,
-			name: `Bus ${bus} Mute`,
-		})
-		variables.push({
-			variableId: `bus${bus}_level`,
-			name: `Bus ${bus} Level`,
-		})
-		variables.push({
-			variableId: `bus${bus}_pan`,
-			name: `Bus ${bus} Pan`,
-		})
+		variables.push({ variableId: `bus${bus}_name`, name: `Bus ${bus} Name`, path: Commands.Bus.Name(bus) })
+		variables.push({ variableId: `bus${bus}_mute`, name: `Bus ${bus} Mute`, path: Commands.Bus.Mute(bus) })
+		variables.push({ variableId: `bus${bus}_level`, name: `Bus ${bus} Level`, path: Commands.Bus.Fader(bus) })
+		variables.push({ variableId: `bus${bus}_pan`, name: `Bus ${bus} Pan`, path: Commands.Bus.Pan(bus) })
 		for (let main = 1; main <= model.mains; main++) {
 			variables.push({
 				variableId: `bus${bus}_main${main}_mute`,

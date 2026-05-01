@@ -20,6 +20,10 @@ const RE_TALKBACK = /^\/cfg\/talk\/(A|B)\/(B|MX|M)(\d+)$/
 const RE_GPIO = /^\/\$ctl\/gpio\/(\d+)\/\$state$/
 const RE_CONTROL = /^\/\$ctl\/(lib|\$stat)\/(\$?\w+)/
 const RE_COLOR = /\/(\w+)\/(\d+)\/\$?col/
+const RE_STRIP_WID = /^\/(ch|aux|bus|mtx|main)\/(\d+)\/wid$/
+const RE_STRIP_TRIM = /^\/(ch|aux)\/(\d+)\/in\/set\/trim$/
+const RE_STRIP_INV = /^\/(ch|aux)\/(\d+)\/in\/set\/inv$/
+const RE_ALT_SRC = /^\/(ch|aux)\/(\d+)\/in\/set\/altsrc$/
 const RE_SEND_MODE = /^\/ch\/(\d+)\/send\/(\d+)\/mode$/
 const RE_CONN_GRP = /^\/ch\/(\d+)\/in\/conn\/grp$/
 const RE_CONN_IN = /^\/ch\/(\d+)\/in\/conn\/in$/
@@ -92,6 +96,7 @@ export class VariableHandler extends EventEmitter {
 				this.updateStatusVariables(path, args[0]?.value as string) ??
 				this.updateSendModeVariables(path, args[0]?.value as string) ??
 				this.updateInputPatchVariables(path, args[0]) ??
+				this.updateStripInputVariables(path, args[0]) ??
 				this.updateColorVariables(path, args[0]?.value as string) ??
 				this.updateFxVariables(path, args[0])
 
@@ -565,16 +570,31 @@ export class VariableHandler extends EventEmitter {
 		// this.emit('update-variable', 'next_scene_name', nextName as string)
 	}
 
-	private updateIoVariables(path: string, arg: OSCMetaArgument): VariableUpdate[] | undefined {
-		// Per-channel alt source: /ch/N/in/set/altsrc (0=Main, 1=Alt)
-		const chAltMatch = path.match(/^\/ch\/(\d+)\/in\/set\/altsrc$/)
-		if (chAltMatch) {
-			const ch = chAltMatch[1]
+	private updateStripInputVariables(path: string, arg: OSCMetaArgument): VariableUpdate[] | undefined {
+		// Stereo width: /ch/N/wid, /aux/N/wid, /bus/N/wid, etc.
+		const widMatch = path.match(RE_STRIP_WID)
+		if (widMatch) return [{ name: `${widMatch[1]}${widMatch[2]}_wid`, value: this.round(arg?.value as number, 0) }]
+
+		// Input trim: /ch/N/in/set/trim, /aux/N/in/set/trim
+		const trimMatch = path.match(RE_STRIP_TRIM)
+		if (trimMatch) return [{ name: `${trimMatch[1]}${trimMatch[2]}_trim`, value: this.round(arg?.value as number, 1) }]
+
+		// Phase invert: /ch/N/in/set/inv, /aux/N/in/set/inv
+		const invMatch = path.match(RE_STRIP_INV)
+		if (invMatch) return [{ name: `${invMatch[1]}${invMatch[2]}_inv`, value: arg?.value as number }]
+
+		// Alt source: /ch/N/in/set/altsrc, /aux/N/in/set/altsrc
+		const altMatch = path.match(RE_ALT_SRC)
+		if (altMatch) {
 			const raw = arg?.value
 			const isAlt = typeof raw === 'number' ? raw === 1 : String(raw).trim() === '1'
-			return [{ name: `ch${ch}_alt`, value: isAlt ? 'Alt' : 'Main' }]
+			return [{ name: `${altMatch[1]}${altMatch[2]}_alt`, value: isAlt ? 'Alt' : 'Main' }]
 		}
 
+		return undefined
+	}
+
+	private updateIoVariables(path: string, arg: OSCMetaArgument): VariableUpdate[] | undefined {
 		const altsw = IoCommands.MainAltSwitch()
 		if (path !== altsw) return
 

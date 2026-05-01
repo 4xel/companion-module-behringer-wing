@@ -31,6 +31,26 @@ export function getAuxVariables(model: ModelSpec): VariableDefinition[] {
 			name: `Aux ${aux} Pan`,
 			path: Commands.Aux.Pan(aux),
 		})
+		variables.push({
+			variableId: `aux${aux}_wid`,
+			name: `Aux ${aux} Stereo Width`,
+			path: Commands.Aux.Width(aux),
+		})
+		variables.push({
+			variableId: `aux${aux}_trim`,
+			name: `Aux ${aux} Input Trim (dB)`,
+			path: Commands.Aux.InputTrim(aux),
+		})
+		variables.push({
+			variableId: `aux${aux}_inv`,
+			name: `Aux ${aux} Phase Invert (0/1)`,
+			path: Commands.Aux.InputInvert(aux),
+		})
+		variables.push({
+			variableId: `aux${aux}_alt`,
+			name: `Aux ${aux} Input Source (Main/Alt)`,
+			path: Commands.Aux.InputAltSource(aux),
+		})
 		for (let main = 1; main <= model.mains; main++) {
 			variables.push({
 				variableId: `aux${aux}_main${main}_mute`,
