@@ -1065,32 +1065,26 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 	return { ...feedbacks, ...advancedFeedbacks }
 }
 
-// Wing strip colour palette — index matches the /col integer (1-18).
-// Palette photo read right-to-left, top-to-bottom matches green=4 (user-confirmed).
-// Row 1 R→L: Olive, Purple, Orange
-// Row 2 R→L: Green(4), Magenta, Yellow
-// Row 3 R→L: Mint, Red, Sky Blue
-// Row 4 R→L: Teal, Coral, Royal Blue
-// Row 5 R→L: Gray, Salmon, Dark Navy
-// Row 6 R→L: White, Brown, Violet
+// Wing strip colour palette — indices from the Wing colour picker (1-18).
+// Verified from numbered palette screenshot provided by user.
 const WING_STRIP_COLOURS: Record<number, number> = {
 	0: combineRgb(40, 40, 40), // Default / unset
-	1: combineRgb(145, 175, 40), // Olive / Lime
-	2: combineRgb(150, 45, 195), // Purple
-	3: combineRgb(235, 165, 30), // Orange / Amber
-	4: combineRgb(60, 155, 60), // Green ← user-confirmed
-	5: combineRgb(225, 35, 195), // Magenta / Hot Pink
-	6: combineRgb(230, 215, 40), // Yellow
-	7: combineRgb(50, 195, 145), // Mint / Teal-Green
-	8: combineRgb(195, 50, 60), // Red / Crimson
-	9: combineRgb(80, 180, 225), // Sky Blue / Cyan
-	10: combineRgb(35, 175, 180), // Teal / Cyan
-	11: combineRgb(225, 100, 65), // Coral / Orange-Red
-	12: combineRgb(50, 115, 225), // Royal Blue
-	13: combineRgb(145, 145, 145), // Gray
-	14: combineRgb(230, 145, 145), // Salmon / Pink
-	15: combineRgb(35, 40, 110), // Dark Navy
-	16: combineRgb(225, 225, 225), // White / Light Gray
-	17: combineRgb(165, 80, 35), // Brown
-	18: combineRgb(110, 50, 240), // Violet / Purple
+	1: combineRgb(50, 60, 175), // Dark Navy / Indigo
+	2: combineRgb(55, 120, 220), // Royal Blue
+	3: combineRgb(115, 50, 245), // Bright Violet / Purple
+	4: combineRgb(40, 190, 190), // Teal / Cyan
+	5: combineRgb(65, 165, 70), // Green
+	6: combineRgb(145, 185, 35), // Lime / Yellow-Green
+	7: combineRgb(230, 210, 40), // Yellow
+	8: combineRgb(165, 115, 40), // Brown
+	9: combineRgb(195, 50, 60), // Red / Crimson
+	10: combineRgb(225, 145, 140), // Salmon / Light Pink
+	11: combineRgb(225, 40, 200), // Magenta / Hot Pink
+	12: combineRgb(150, 50, 195), // Purple / Violet
+	13: combineRgb(235, 170, 35), // Orange / Amber
+	14: combineRgb(85, 185, 225), // Sky Blue / Light Blue
+	15: combineRgb(225, 100, 65), // Coral / Orange-Red
+	16: combineRgb(55, 200, 150), // Mint / Seafoam
+	17: combineRgb(145, 145, 145), // Gray
+	18: combineRgb(225, 225, 225), // White / Light Gray
 }
