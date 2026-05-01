@@ -654,8 +654,8 @@ function getGainCompGainKnobPreset(ch: number): CompanionButtonPresetDefinition 
 			{
 				down: [],
 				up: [],
-				rotate_left: [{ actionId: CommonActions.AdjustHeadampGain, options: { channel: path, step: -3 } }],
-				rotate_right: [{ actionId: CommonActions.AdjustHeadampGain, options: { channel: path, step: 3 } }],
+				rotate_left: [{ actionId: CommonActions.AdjustHeadampGain, options: { channel: path, step: -2.5 } }],
+				rotate_right: [{ actionId: CommonActions.AdjustHeadampGain, options: { channel: path, step: 2.5 } }],
 			},
 		],
 		feedbacks: [
@@ -881,8 +881,8 @@ function getHeadampGainPreset(ch: number): CompanionButtonPresetDefinition {
 			{
 				down: [],
 				up: [],
-				rotate_left: [{ actionId: CommonActions.AdjustHeadampGain, options: { channel: path, step: -3 } }],
-				rotate_right: [{ actionId: CommonActions.AdjustHeadampGain, options: { channel: path, step: 3 } }],
+				rotate_left: [{ actionId: CommonActions.AdjustHeadampGain, options: { channel: path, step: -2.5 } }],
+				rotate_right: [{ actionId: CommonActions.AdjustHeadampGain, options: { channel: path, step: 2.5 } }],
 			},
 		],
 		feedbacks: [],
