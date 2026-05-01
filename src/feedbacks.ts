@@ -4,6 +4,7 @@ import { WingConfig } from './config.js'
 import { SetRequired } from 'type-fest' // eslint-disable-line n/no-missing-import
 import {
 	combineRgb,
+	CompanionAdvancedFeedbackResult,
 	CompanionBooleanFeedbackDefinition,
 	CompanionFeedbackDefinitions,
 	CompanionFeedbackInfo,
@@ -973,29 +974,35 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 			unsubscribe: () => {},
 		},
 
+		// Placeholder — FaderDisplay is advanced type, defined below.
+		[FeedbackId.FaderDisplay]: undefined,
+
+		// Placeholder — overridden below by advancedFeedbacks spread.
+		[FeedbackId.StripColour]: undefined,
+	}
+
+	// Advanced feedbacks return full style objects directly — no user config needed.
+	const faderDisplayStrips = [
+		...state.namedChoices.channels,
+		...state.namedChoices.auxes,
+		...state.namedChoices.busses,
+		...state.namedChoices.matrices,
+		...state.namedChoices.mains,
+		...state.namedChoices.dcas,
+	]
+	const advancedFeedbacks = {
 		[FeedbackId.FaderDisplay]: {
-			type: 'boolean',
+			type: 'advanced' as const,
 			name: 'Fader - Live Level Display',
 			description: 'Shows current fader level with a visual bar. Use on fader display presets.',
-			defaultStyle: {},
-			options: [
-				...GetDropdownWithVariables('Strip', 'sel', [
-					...state.namedChoices.channels,
-					...state.namedChoices.auxes,
-					...state.namedChoices.busses,
-					...state.namedChoices.matrices,
-					...state.namedChoices.mains,
-					...state.namedChoices.dcas,
-				]),
-			],
-			callback: (event: CompanionFeedbackInfo) => {
+			options: [...GetDropdownWithVariables('Strip', 'sel', faderDisplayStrips)],
+			callback: (event: CompanionFeedbackInfo): CompanionAdvancedFeedbackResult => {
 				const sel = ActionUtil.getStringWithVariables(event, 'sel')
 				const st = _self.stateHandler?.state
-				if (!st) return false
+				if (!st) return {}
 				const db = getActualFromState(`${sel}/fdr`, st)
 				const nameRaw = (st.get(`${sel}/$name`) ?? st.get(`${sel}/name`))?.[0]?.value
 				const name: string = typeof nameRaw === 'string' ? nameRaw : sel.replace(/^\//, '').toUpperCase()
-
 				let bar = '░░░░░░░░'
 				let color = combineRgb(200, 200, 200)
 				if (db !== undefined) {
@@ -1007,26 +1014,19 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 					else color = combineRgb(150, 150, 150)
 				}
 				const dbStr = db !== undefined ? (db === -144 ? '−∞' : `${db >= 0 ? '+' : ''}${db.toFixed(1)}`) : '---'
-				return {
-					text: `${name}\n${bar}\n${dbStr}dB`,
-					color,
-					size: '14',
-				} as any
+				return { text: `${name}\n${bar}\n${dbStr}dB`, color, size: 14 }
 			},
 			subscribe: (event: CompanionFeedbackInfo) => {
 				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				subs.subscribe(`${sel}/fdr`, event.id, FeedbackId.FaderDisplay)
 				ensureLoaded(`${sel}/fdr`)
 				ensureLoaded(`${sel}/$name`)
 			},
-			unsubscribe: () => {},
+			unsubscribe: (event: CompanionFeedbackInfo) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				subs.unsubscribe(`${sel}/fdr`, event.id)
+			},
 		},
-
-		// Placeholder — overridden below by advancedFeedbacks spread.
-		[FeedbackId.StripColour]: undefined,
-	}
-
-	// Advanced feedbacks return full style objects directly — no user config needed.
-	const advancedFeedbacks = {
 		[FeedbackId.StripColour]: {
 			type: 'advanced' as const,
 			name: 'Strip - Colour Sync',
@@ -1043,7 +1043,7 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 					...state.namedChoices.dcas,
 				]),
 			],
-			callback: (event: CompanionFeedbackInfo) => {
+			callback: (event: CompanionFeedbackInfo): CompanionAdvancedFeedbackResult => {
 				const sel = ActionUtil.getStringWithVariables(event, 'sel')
 				const st = _self.stateHandler?.state
 				if (!st) return {}
@@ -1066,26 +1066,31 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 }
 
 // Wing strip colour palette — index matches the /col integer (1-18).
-// Index 0 = unset/default (dark grey).
-// Order confirmed: 1-3 blues, 4=green (user-verified), then yellow/orange/red/pink/purple.
+// Palette photo read right-to-left, top-to-bottom matches green=4 (user-confirmed).
+// Row 1 R→L: Olive, Purple, Orange
+// Row 2 R→L: Green(4), Magenta, Yellow
+// Row 3 R→L: Mint, Red, Sky Blue
+// Row 4 R→L: Teal, Coral, Royal Blue
+// Row 5 R→L: Gray, Salmon, Dark Navy
+// Row 6 R→L: White, Brown, Violet
 const WING_STRIP_COLOURS: Record<number, number> = {
 	0: combineRgb(40, 40, 40), // Default / unset
-	1: combineRgb(93, 104, 135), // Gray Blue
-	2: combineRgb(48, 112, 226), // Medium Blue
-	3: combineRgb(20, 47, 170), // Dark Blue
-	4: combineRgb(0, 180, 70), // Green
-	5: combineRgb(110, 150, 30), // Olive / Yellow-Green
-	6: combineRgb(220, 200, 0), // Yellow
-	7: combineRgb(220, 120, 0), // Orange
-	8: combineRgb(215, 35, 35), // Red
-	9: combineRgb(220, 100, 75), // Coral / Salmon-Red
-	10: combineRgb(205, 45, 160), // Magenta
-	11: combineRgb(125, 35, 165), // Purple
-	12: combineRgb(155, 155, 155), // Light Gray
-	13: combineRgb(0, 170, 170), // Teal / Cyan
-	14: combineRgb(100, 165, 235), // Light Blue
-	15: combineRgb(220, 140, 120), // Salmon / Pink
-	16: combineRgb(155, 90, 30), // Brown
-	17: combineRgb(65, 65, 65), // Dark Gray
-	18: combineRgb(200, 200, 200), // Light Gray / White
+	1: combineRgb(145, 175, 40), // Olive / Lime
+	2: combineRgb(150, 45, 195), // Purple
+	3: combineRgb(235, 165, 30), // Orange / Amber
+	4: combineRgb(60, 155, 60), // Green ← user-confirmed
+	5: combineRgb(225, 35, 195), // Magenta / Hot Pink
+	6: combineRgb(230, 215, 40), // Yellow
+	7: combineRgb(50, 195, 145), // Mint / Teal-Green
+	8: combineRgb(195, 50, 60), // Red / Crimson
+	9: combineRgb(80, 180, 225), // Sky Blue / Cyan
+	10: combineRgb(35, 175, 180), // Teal / Cyan
+	11: combineRgb(225, 100, 65), // Coral / Orange-Red
+	12: combineRgb(50, 115, 225), // Royal Blue
+	13: combineRgb(145, 145, 145), // Gray
+	14: combineRgb(230, 145, 145), // Salmon / Pink
+	15: combineRgb(35, 40, 110), // Dark Navy
+	16: combineRgb(225, 225, 225), // White / Light Gray
+	17: combineRgb(165, 80, 35), // Brown
+	18: combineRgb(110, 50, 240), // Violet / Purple
 }
