@@ -148,10 +148,13 @@ export class GainCompensationHandler extends EventEmitter {
 	}
 
 	compensateChannel(ch: number): void {
-		if (!this.refs.has(ch)) return
-		this.emit('ensure-loaded', ChannelCommands.InputGain(ch))
-		this.emit('ensure-loaded', ChannelCommands.InputTrim(ch))
-		setTimeout(() => this.applyCompensationForChannel(ch), 400)
+		// getNodeNumberFromID returns a string typed as number — normalise to a real integer
+		// so Map lookups against parseInt() keys work correctly.
+		const c = Number(ch)
+		if (!this.refs.has(c)) return
+		this.emit('ensure-loaded', ChannelCommands.InputGain(c))
+		this.emit('ensure-loaded', ChannelCommands.InputTrim(c))
+		setTimeout(() => this.applyCompensationForChannel(c), 400)
 	}
 
 	isEnabled(): boolean {
@@ -165,19 +168,21 @@ export class GainCompensationHandler extends EventEmitter {
 	}
 
 	isChannelCompOk(ch: number): boolean {
-		const ref = this.refs.get(ch)
+		const c = Number(ch)
+		const ref = this.refs.get(c)
 		if (!ref) return true
-		const currentGain = this.gainCache.get(ch)
-		const currentTrim = this.trimCache.get(ch)
+		const currentGain = this.gainCache.get(c)
+		const currentTrim = this.trimCache.get(c)
 		if (currentGain === undefined || currentTrim === undefined) return true
 		const expected = Math.max(TRIM_MIN, Math.min(TRIM_MAX, ref.trim - (currentGain - ref.gain)))
 		return Math.abs(currentTrim - expected) <= TRIM_TOLERANCE
 	}
 
 	getCompDelta(ch: number): number | undefined {
-		const ref = this.refs.get(ch)
+		const c = Number(ch)
+		const ref = this.refs.get(c)
 		if (!ref) return undefined
-		const g = this.gainCache.get(ch)
+		const g = this.gainCache.get(c)
 		return g !== undefined ? g - ref.gain : undefined
 	}
 
