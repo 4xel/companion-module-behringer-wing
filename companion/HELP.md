@@ -85,7 +85,6 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Common | Gain Comp - Disable | Disable gain compensation. |
 | Common | Gain Comp - Take Snapshot | Capture current gain and trim for all channels as the compensation reference. |
 | Common | Release All Mute Groups | Unmute all mute groups (1-8) simultaneously. |
-| Common | Reset Channel | Full reset: cut fader, unmute, zero trim/pan/width/phase-invert, bus and main sends to unity, EQ flat. |
 | Common | Reset Input Trim | Reset the input trim of a channel or aux strip to 0 dB. |
 | Common | Restore Gain | Restore the gain of a channel or aux. |
 | Common | Restore Level | Restore the fader level of a channel, aux, bus, dca, matrix or main. |

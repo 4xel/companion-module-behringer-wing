@@ -131,7 +131,6 @@ export enum CommonActions {
 	CompensateChannel = 'compensate-channel',
 
 	// Batch multi-parameter
-	BatchResetChannel = 'batch-reset-channel',
 	BatchKillSends = 'batch-kill-sends',
 	BatchMicroScene = 'batch-micro-scene',
 }
@@ -1337,7 +1336,7 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 				if (!cmd) return
 				const current = StateUtil.getNumberFromState(cmd, state) ?? 0
 				const newVal = Math.max(-18, Math.min(18, current + step))
-				await send(cmd, newVal)
+				await send(cmd, newVal, true)
 				state.set(cmd, [{ type: 'f', value: newVal }])
 			},
 			subscribe: (event) => {
@@ -1357,7 +1356,7 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 				const sel = ActionUtil.getStringWithVariables(event, 'sel')
 				const cmd = ActionUtil.getTrimCommand(sel)
 				if (!cmd) return
-				await send(cmd, 0)
+				await send(cmd, 0.0, true)
 				state.set(cmd, [{ type: 'f', value: 0 }])
 			},
 			subscribe: (event) => {
@@ -1418,7 +1417,8 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 
 		[CommonActions.ResetChannel]: {
 			name: 'Reset Channel',
-			description: 'Cut fader, unmute, zero trim, center pan, and reset width in one action.',
+			description:
+				'Full reset: cut fader, unmute, zero trim/pan/width/phase-invert, bus and main sends to unity, EQ flat.',
 			options: [
 				...GetDropdownWithVariables('Strip', 'sel', [...state.namedChoices.channels, ...state.namedChoices.auxes]),
 			],
@@ -1428,7 +1428,7 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 
 				const faderCmd = ActionUtil.getFaderCommand(sel, num)
 				if (faderCmd) {
-					await send(faderCmd, -144)
+					await send(faderCmd, -144, true)
 					state.set(faderCmd, [{ type: 'f', value: -144 }])
 				}
 
@@ -1440,20 +1440,50 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 
 				const trimCmd = ActionUtil.getTrimCommand(sel)
 				if (trimCmd) {
-					await send(trimCmd, 0)
+					await send(trimCmd, 0, true)
 					state.set(trimCmd, [{ type: 'f', value: 0 }])
 				}
 
 				const panCmd = ActionUtil.getPanoramaCommand(sel, num)
 				if (panCmd) {
-					await send(panCmd, 0)
+					await send(panCmd, 0, true)
 					state.set(panCmd, [{ type: 'f', value: 0 }])
 				}
 
 				const widthCmd = ActionUtil.getWidthCommand(sel)
 				if (widthCmd) {
-					await send(widthCmd, 0)
+					await send(widthCmd, 0, true)
 					state.set(widthCmd, [{ type: 'f', value: 0 }])
+				}
+
+				const invCmd = ActionUtil.getPhaseInvertCommand(sel)
+				if (invCmd) {
+					await send(invCmd, 0)
+					state.set(invCmd, [{ type: 'i', value: 0 }])
+				}
+
+				for (let i = 1; i <= 16; i++) {
+					const lvlCmd = ActionUtil.getBusSendLevelCommand(sel, i)
+					if (lvlCmd) {
+						await send(lvlCmd, 0, true)
+						state.set(lvlCmd, [{ type: 'f', value: 0 }])
+					}
+				}
+
+				for (let i = 1; i <= 4; i++) {
+					const lvlCmd = ActionUtil.getMainSendLevelCommand(sel, num, i)
+					if (lvlCmd) {
+						await send(lvlCmd, 0, true)
+						state.set(lvlCmd, [{ type: 'f', value: 0 }])
+					}
+				}
+
+				const eqNode = ActionUtil.getEqNode(sel)
+				if (eqNode) {
+					for (const band of ['l', '1', '2', '3', '4', 'h']) {
+						await send(`${eqNode}/${band}g`, 0, true)
+						state.set(`${eqNode}/${band}g`, [{ type: 'f', value: 0 }])
+					}
 				}
 			},
 		},
@@ -1618,32 +1648,9 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 		// Batch multi-parameter actions
 		////////////////////////////////////////////////////////////////
 
-		[CommonActions.BatchResetChannel]: {
-			name: 'Batch Reset Channel (Atomic)',
-			description:
-				'Reset fader/mute/pan/width/trim/phase invert in a single OSC message. Atomic — no partial-state flashes.',
-			options: [
-				...GetDropdownWithVariables('Strip', 'sel', [...state.namedChoices.channels, ...state.namedChoices.auxes]),
-			],
-			callback: async (event) => {
-				const sel = ActionUtil.getStringWithVariables(event, 'sel')
-				const num = ActionUtil.getNodeNumberFromID(sel)
-				const type = sel.startsWith('/ch') ? 'ch' : 'aux'
-				const node = `/${type}/${num}`
-				await send(node, 'fdr=-144,mute=0,pan=0,wid=0')
-				await send(`${node}/in/set`, 'trim=0,inv=0')
-				state.set(`${node}/fdr`, [{ type: 'f', value: -144 }])
-				state.set(`${node}/mute`, [{ type: 'i', value: 0 }])
-				state.set(`${node}/pan`, [{ type: 'f', value: 0 }])
-				state.set(`${node}/wid`, [{ type: 'f', value: 0 }])
-				state.set(`${node}/in/set/trim`, [{ type: 'f', value: 0 }])
-				state.set(`${node}/in/set/inv`, [{ type: 'i', value: 0 }])
-			},
-		},
-
 		[CommonActions.BatchKillSends]: {
 			name: 'Batch Kill All Bus Sends',
-			description: 'Disable all 16 bus sends from a channel or aux in a single OSC message.',
+			description: 'Disable all 16 bus sends from a channel or aux.',
 			options: [
 				...GetDropdownWithVariables('Strip', 'sel', [...state.namedChoices.channels, ...state.namedChoices.auxes]),
 			],
@@ -1653,9 +1660,8 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 				const type = sel.startsWith('/ch') ? 'ch' : 'aux'
 				const node = `/${type}/${num}`
 				const busCount = 16
-				const params = Array.from({ length: busCount }, (_, i) => `send.${i + 1}.on=0`).join(',')
-				await send(node, params)
 				for (let i = 1; i <= busCount; i++) {
+					await send(`${node}/send/${i}/on`, 0)
 					state.set(`${node}/send/${i}/on`, [{ type: 'i', value: 0 }])
 				}
 			},

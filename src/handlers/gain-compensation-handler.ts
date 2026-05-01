@@ -89,6 +89,8 @@ export class GainCompensationHandler extends EventEmitter {
 
 				this.gainCache.set(ch, gain)
 				this.emitChannelVariables(ch)
+				// Always re-check ChannelNeedsComp so the feedback stays live in all modes
+				if (this.refs.has(ch)) this.emit('check-feedbacks', ['channel-needs-comp'])
 
 				if (this.enabled && this.mode === 'auto' && this.refs.has(ch)) {
 					this.scheduleAutoComp(ch)
@@ -111,6 +113,7 @@ export class GainCompensationHandler extends EventEmitter {
 
 				this.trimCache.set(ch, trim)
 				this.emitChannelVariables(ch)
+				if (this.refs.has(ch)) this.emit('check-feedbacks', ['channel-needs-comp'])
 			}
 		}
 	}
