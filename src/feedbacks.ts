@@ -1067,24 +1067,25 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 
 // Wing strip colour palette — index matches the /col integer (1-18).
 // Index 0 = unset/default (dark grey).
+// Order confirmed: 1-3 blues, 4=green (user-verified), then yellow/orange/red/pink/purple.
 const WING_STRIP_COLOURS: Record<number, number> = {
-	0: combineRgb(40, 40, 40),
+	0: combineRgb(40, 40, 40), // Default / unset
 	1: combineRgb(93, 104, 135), // Gray Blue
 	2: combineRgb(48, 112, 226), // Medium Blue
 	3: combineRgb(20, 47, 170), // Dark Blue
-	4: combineRgb(0, 175, 175), // Turquoise
-	5: combineRgb(0, 177, 67), // Green
-	6: combineRgb(115, 140, 35), // Olive Green
-	7: combineRgb(230, 210, 0), // Yellow
-	8: combineRgb(155, 90, 30), // Brown
-	9: combineRgb(220, 35, 35), // Red
-	10: combineRgb(225, 110, 80), // Coral
-	11: combineRgb(210, 45, 165), // Magenta
-	12: combineRgb(130, 35, 170), // Purple
-	13: combineRgb(225, 120, 0), // Orange
+	4: combineRgb(0, 180, 70), // Green
+	5: combineRgb(110, 150, 30), // Olive / Yellow-Green
+	6: combineRgb(220, 200, 0), // Yellow
+	7: combineRgb(220, 120, 0), // Orange
+	8: combineRgb(215, 35, 35), // Red
+	9: combineRgb(220, 100, 75), // Coral / Salmon-Red
+	10: combineRgb(205, 45, 160), // Magenta
+	11: combineRgb(125, 35, 165), // Purple
+	12: combineRgb(155, 155, 155), // Light Gray
+	13: combineRgb(0, 170, 170), // Teal / Cyan
 	14: combineRgb(100, 165, 235), // Light Blue
-	15: combineRgb(225, 145, 125), // Salmon
-	16: combineRgb(0, 145, 145), // Teal
+	15: combineRgb(220, 140, 120), // Salmon / Pink
+	16: combineRgb(155, 90, 30), // Brown
 	17: combineRgb(65, 65, 65), // Dark Gray
-	18: combineRgb(160, 160, 160), // Light Gray
+	18: combineRgb(200, 200, 200), // Light Gray / White
 }
