@@ -78,26 +78,14 @@ export class GainCompensationHandler extends EventEmitter {
 			if (gainMatch) {
 				const ch = parseInt(gainMatch[1])
 				const gain = extractValue(args)
-				this.logger?.info(
-					`[GainComp] gain msg ch${ch}: extractValue=${gain} args.length=${args.length} args[0]=${JSON.stringify(args[0]?.value)} args[2]=${JSON.stringify(args[2]?.value)}`,
-				)
-				if (gain === null) {
-					this.logger?.info(`[GainComp] ch${ch}: gain null, skipping`)
-					continue
-				}
+				if (gain === null) continue
 
-				const prev = this.gainCache.get(ch)
 				this.gainCache.set(ch, gain)
 				this.emitChannelVariables(ch)
-				this.logger?.info(`[GainComp] ch${ch}: gainCache updated ${prev}→${gain}, emitChannelVariables called`)
 
 				if (this.refs.has(ch)) {
 					this.emit('check-feedbacks', ['channel-needs-comp'])
-					const ok = this.isChannelCompOk(ch)
-					this.logger?.info(
-						`[GainComp] ch${ch}: refs exist, enabled=${this.enabled} mode=${this.mode} compOk=${ok} trimCache=${this.trimCache.get(ch)}`,
-					)
-					if (this.enabled && this.mode === 'auto' && !ok) {
+					if (this.enabled && this.mode === 'auto' && !this.isChannelCompOk(ch)) {
 						this.applyCompensationForChannel(ch)
 					}
 				}
@@ -110,11 +98,7 @@ export class GainCompensationHandler extends EventEmitter {
 				const trim = extractValue(args)
 				if (trim === null) continue
 
-				const blocked = args.length >= 3 && this.trimCooldown.has(ch)
-				this.logger?.info(
-					`[GainComp] trim msg ch${ch}: trim=${trim} args.length=${args.length} cooldown=${this.trimCooldown.has(ch)} blocked=${blocked}`,
-				)
-				if (blocked) continue
+				if (args.length >= 3 && this.trimCooldown.has(ch)) continue
 
 				this.trimCache.set(ch, trim)
 				this.emitChannelVariables(ch)
@@ -285,7 +269,6 @@ export class GainCompensationHandler extends EventEmitter {
 	private emitChannelVariables(ch: number): void {
 		const vars: CompanionVariableValues = {}
 		this.addChannelVars(ch, vars)
-		this.logger?.info(`[GainComp] emitChannelVariables ch${ch}: ${JSON.stringify(vars)}`)
 		this.emit('update-variables', vars)
 	}
 
