@@ -1003,18 +1003,18 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 				const db = getActualFromState(`${sel}/fdr`, st)
 				const nameRaw = (st.get(`${sel}/$name`) ?? st.get(`${sel}/name`))?.[0]?.value
 				const name: string = typeof nameRaw === 'string' ? nameRaw : sel.replace(/^\//, '').toUpperCase()
-				let bar = '░░░░░░░░'
+				let bar = '░░░░░'
 				let color = combineRgb(200, 200, 200)
 				if (db !== undefined) {
-					const filled = Math.max(0, Math.min(8, Math.round(((db + 60) / 70) * 8)))
-					bar = '█'.repeat(filled) + '░'.repeat(8 - filled)
+					const filled = Math.max(0, Math.min(5, Math.round(((db + 60) / 70) * 5)))
+					bar = '█'.repeat(filled) + '░'.repeat(5 - filled)
 					if (db >= 0) color = combineRgb(255, 220, 0)
 					else if (db >= -12) color = combineRgb(100, 220, 100)
 					else if (db >= -40) color = combineRgb(180, 220, 100)
 					else color = combineRgb(150, 150, 150)
 				}
 				const dbStr = db !== undefined ? (db === -144 ? '−∞' : `${db >= 0 ? '+' : ''}${db.toFixed(1)}`) : '---'
-				return { text: `${name}\n${bar}\n${dbStr}dB`, color, size: 14 }
+				return { text: `${name}\n${bar} ${dbStr}dB`, color, size: 14 }
 			},
 			subscribe: (event: CompanionFeedbackInfo) => {
 				const sel = ActionUtil.getStringWithVariables(event, 'sel')
