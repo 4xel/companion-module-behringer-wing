@@ -106,6 +106,13 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 	presets['talkback-a-latch'] = getTalkbackLatchPreset('A')
 	presets['talkback-b-latch'] = getTalkbackLatchPreset('B')
 
+	for (let i = 1; i <= model.busses; i++) {
+		presets[`mon-bus${i}-master`] = getMonitorMasterPreset(i)
+		for (let ch = 1; ch <= model.channels; ch++) {
+			presets[`mon-ch${ch}-bus${i}-send`] = getMonitorSendPreset(ch, i)
+		}
+	}
+
 	presets['stat-aes50-a'] = getAes50StatusPreset('A')
 	presets['stat-aes50-b'] = getAes50StatusPreset('B')
 	presets['stat-aes50-c'] = getAes50StatusPreset('C')
@@ -456,21 +463,10 @@ function getTalkbackPreset(talkback: 'A' | 'B'): CompanionButtonPresetDefinition
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(0, 0, 0),
 		},
-		options: {
-			stepAutoProgress: true,
-		},
 		steps: [
 			{
-				down: [
-					{
-						actionId: ConfigActions.TalkbackOn,
-						options: {
-							tb: `${talkback}`,
-							solo: 2,
-						},
-					},
-				],
-				up: [],
+				down: [{ actionId: ConfigActions.TalkbackOn, options: { tb: `${talkback}`, solo: 1 } }],
+				up: [{ actionId: ConfigActions.TalkbackOn, options: { tb: `${talkback}`, solo: 0 } }],
 			},
 		],
 		feedbacks: [
@@ -1850,6 +1846,116 @@ function getDcaToggleMutePreset(n: number): CompanionButtonPresetDefinition {
 				feedbackId: FeedbackId.Mute,
 				options: { sel: path, mute: 1 },
 				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(255, 0, 0) },
+			},
+		],
+	}
+}
+
+////////////////////////////////////////////////////////////////
+// Monitor engineer presets
+////////////////////////////////////////////////////////////////
+
+function getMonitorMasterPreset(bus: number): CompanionButtonPresetDefinition {
+	const path = `/bus/${bus}`
+	return {
+		name: `Monitor BUS${bus} Master`,
+		category: 'Monitor',
+		type: 'button',
+		style: {
+			text: `BUS${bus}`,
+			size: '14',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 30, 50),
+		},
+		options: { rotaryActions: true },
+		steps: [
+			{
+				down: [{ actionId: CommonActions.SetMute, options: { sel: path, mute: -1 } }],
+				up: [],
+				rotate_left: [
+					{
+						actionId: CommonActions.DeltaFader,
+						options: { sel: path, step: -3, step_use_variables: false, fadeDuration: 0 },
+					},
+				],
+				rotate_right: [
+					{
+						actionId: CommonActions.DeltaFader,
+						options: { sel: path, step: 3, step_use_variables: false, fadeDuration: 0 },
+					},
+				],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.FaderDisplay,
+				options: { sel: path, sel_use_variables: false },
+			},
+			{
+				feedbackId: FeedbackId.Mute,
+				options: { sel: path, mute: 1 },
+				style: { color: combineRgb(255, 100, 100), bgcolor: combineRgb(80, 0, 0) },
+			},
+		],
+	}
+}
+
+function getMonitorSendPreset(ch: number, bus: number): CompanionButtonPresetDefinition {
+	const src = `/ch/${ch}`
+	const dest = `/bus/${bus}`
+	return {
+		name: `Monitor CH${ch} → BUS${bus}`,
+		category: 'Monitor',
+		type: 'button',
+		style: {
+			text: `CH${ch}\n→B${bus}`,
+			size: 'auto',
+			color: combineRgb(200, 220, 255),
+			bgcolor: combineRgb(0, 25, 45),
+		},
+		options: { rotaryActions: true },
+		steps: [
+			{
+				down: [
+					{
+						actionId: CommonActions.SetSendMute,
+						options: { src, dest, src_use_variables: false, dest_use_variables: false, mute: -1 },
+					},
+				],
+				up: [],
+				rotate_left: [
+					{
+						actionId: CommonActions.DeltaSendFader,
+						options: {
+							src,
+							dest,
+							src_use_variables: false,
+							dest_use_variables: false,
+							step: -1,
+							step_use_variables: false,
+						},
+					},
+				],
+				rotate_right: [
+					{
+						actionId: CommonActions.DeltaSendFader,
+						options: {
+							src,
+							dest,
+							src_use_variables: false,
+							dest_use_variables: false,
+							step: 1,
+							step_use_variables: false,
+						},
+					},
+				],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.SendMute,
+				options: { src, dest, src_use_variables: false, dest_use_variables: false, on: '1' },
+				style: { bgcolor: combineRgb(60, 0, 0), color: combineRgb(180, 80, 80) },
 			},
 		],
 	}
