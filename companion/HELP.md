@@ -80,6 +80,7 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Common | Adjust Send Level | Adjust the send level from a destination channel strip to a source |
 | Common | Adjust Send Panorama | Adjust the panorama of a send from a channel or aux to a bus or matrix. |
 | Common | Adjust Stereo Width (Relative) | Nudge the stereo width up or down. Use with encoder knobs on StreamDeck+. |
+| Common | Batch Kill All Bus Sends | Disable all 16 bus sends from a channel or aux in a single OSC message. |
 | Common | Clear Solo | Clear the Solo from all channels, auxes, busses, matrices and mains. |
 | Common | Gain Comp - Disable | Disable gain compensation. |
 | Common | Gain Comp - Take Snapshot | Capture current gain and trim for all channels as the compensation reference. |

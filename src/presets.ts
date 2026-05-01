@@ -34,6 +34,8 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`ch${i}-cut`] = getFaderPreset('ch', i, -144, 'Cut')
 		presets[`ch${i}-phantom`] = getPhantomPreset('ch', i)
 		presets[`ch${i}-reset`] = getChannelResetPreset('ch', i)
+		presets[`ch${i}-batch-reset`] = getBatchResetPreset('ch', i)
+		presets[`ch${i}-batch-kill-sends`] = getBatchKillSendsPreset('ch', i)
 	}
 
 	for (let i = 1; i <= model.busses; i++) {
@@ -1521,6 +1523,42 @@ function getChannelResetPreset(base: string, num: number): CompanionButtonPreset
 			bgcolor: combineRgb(80, 0, 0),
 		},
 		steps: [{ down: [{ actionId: CommonActions.ResetChannel, options: { sel: path } }], up: [] }],
+		feedbacks: [],
+	}
+}
+
+function getBatchResetPreset(base: string, num: number): CompanionButtonPresetDefinition {
+	const path = `/${base}/${num}`
+	const name = `${base.toUpperCase()}${num}`
+	return {
+		name: `${name} Batch Reset`,
+		category: 'Channel Strip',
+		type: 'button',
+		style: {
+			text: `${name}\nBatch\nReset`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(100, 0, 0),
+		},
+		steps: [{ down: [{ actionId: CommonActions.BatchResetChannel, options: { sel: path } }], up: [] }],
+		feedbacks: [],
+	}
+}
+
+function getBatchKillSendsPreset(base: string, num: number): CompanionButtonPresetDefinition {
+	const path = `/${base}/${num}`
+	const name = `${base.toUpperCase()}${num}`
+	return {
+		name: `${name} Kill All Sends`,
+		category: 'Channel Strip',
+		type: 'button',
+		style: {
+			text: `${name}\nKill\nSends`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(80, 40, 0),
+		},
+		steps: [{ down: [{ actionId: CommonActions.BatchKillSends, options: { sel: path } }], up: [] }],
 		feedbacks: [],
 	}
 }

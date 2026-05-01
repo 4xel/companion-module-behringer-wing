@@ -129,6 +129,11 @@ export enum CommonActions {
 	EnableGainComp = 'enable-gain-comp',
 	DisableGainComp = 'disable-gain-comp',
 	CompensateChannel = 'compensate-channel',
+
+	// Batch multi-parameter
+	BatchResetChannel = 'batch-reset-channel',
+	BatchKillSends = 'batch-kill-sends',
+	BatchMicroScene = 'batch-micro-scene',
 }
 
 export function createCommonActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
@@ -1606,6 +1611,74 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 				const channel = ActionUtil.getStringWithVariables(event, 'channel')
 				const ch = ActionUtil.getNodeNumberFromID(channel)
 				self.gainCompHandler?.compensateChannel(ch)
+			},
+		},
+
+		////////////////////////////////////////////////////////////////
+		// Batch multi-parameter actions
+		////////////////////////////////////////////////////////////////
+
+		[CommonActions.BatchResetChannel]: {
+			name: 'Batch Reset Channel (Atomic)',
+			description:
+				'Reset fader/mute/pan/width/trim/phase invert in a single OSC message. Atomic — no partial-state flashes.',
+			options: [
+				...GetDropdownWithVariables('Strip', 'sel', [...state.namedChoices.channels, ...state.namedChoices.auxes]),
+			],
+			callback: async (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const num = ActionUtil.getNodeNumberFromID(sel)
+				const type = sel.startsWith('/ch') ? 'ch' : 'aux'
+				const node = `/${type}/${num}`
+				await send(node, 'fdr=-144,mute=0,pan=0,wid=0')
+				await send(`${node}/in/set`, 'trim=0,inv=0')
+				state.set(`${node}/fdr`, [{ type: 'f', value: -144 }])
+				state.set(`${node}/mute`, [{ type: 'i', value: 0 }])
+				state.set(`${node}/pan`, [{ type: 'f', value: 0 }])
+				state.set(`${node}/wid`, [{ type: 'f', value: 0 }])
+				state.set(`${node}/in/set/trim`, [{ type: 'f', value: 0 }])
+				state.set(`${node}/in/set/inv`, [{ type: 'i', value: 0 }])
+			},
+		},
+
+		[CommonActions.BatchKillSends]: {
+			name: 'Batch Kill All Bus Sends',
+			description: 'Disable all 16 bus sends from a channel or aux in a single OSC message.',
+			options: [
+				...GetDropdownWithVariables('Strip', 'sel', [...state.namedChoices.channels, ...state.namedChoices.auxes]),
+			],
+			callback: async (event) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const num = ActionUtil.getNodeNumberFromID(sel)
+				const type = sel.startsWith('/ch') ? 'ch' : 'aux'
+				const node = `/${type}/${num}`
+				const busCount = 16
+				const params = Array.from({ length: busCount }, (_, i) => `send.${i + 1}.on=0`).join(',')
+				await send(node, params)
+				for (let i = 1; i <= busCount; i++) {
+					state.set(`${node}/send/${i}/on`, [{ type: 'i', value: 0 }])
+				}
+			},
+		},
+
+		[CommonActions.BatchMicroScene]: {
+			name: 'Batch Set Node Parameters',
+			description:
+				'Send a Wing multi-parameter batch set to any node. Format: key=value,key=value. Example node /ch/1 with params fdr=0,mute=0.',
+			options: [
+				...GetTextFieldWithVariables('Node Path', 'node', '/ch/1', 'OSC node to target (e.g. /ch/1, /bus/3)'),
+				...GetTextFieldWithVariables(
+					'Parameters',
+					'params',
+					'fdr=0,mute=0',
+					'Comma-separated key=value pairs matching the Wing OSC parameter names for the target node',
+				),
+			],
+			callback: async (event) => {
+				const node = ActionUtil.getStringWithVariables(event, 'node')
+				const params = ActionUtil.getStringWithVariables(event, 'params')
+				if (!node || !params) return
+				await send(node, params)
 			},
 		},
 	}
