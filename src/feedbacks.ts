@@ -402,7 +402,9 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 			subscribe: async (event): Promise<void> => {
 				const card = ActionUtil.getNumberWithVariables(event, 'card')
 				const cmd = CardsCommands.WLiveCardSDState(card)
-				subscribeFeedback(ensureLoaded, subs, cmd, event)
+				// Register subscription only — no ensureLoaded. WLive state may not
+				// respond if cards are absent; the wlivePoller keeps state current.
+				subs.subscribe(cmd, event.id, event.feedbackId as FeedbackId)
 			},
 			unsubscribe: (event: CompanionFeedbackInfo): void => {
 				const card = ActionUtil.getNumberWithVariables(event, 'card')
@@ -429,7 +431,7 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 			subscribe: async (event): Promise<void> => {
 				const card = ActionUtil.getNumberWithVariables(event, 'card')
 				const cmd = CardsCommands.WLiveCardState(card)
-				subscribeFeedback(ensureLoaded, subs, cmd, event)
+				subs.subscribe(cmd, event.id, event.feedbackId as FeedbackId)
 			},
 			unsubscribe: (event: CompanionFeedbackInfo): void => {
 				const card = ActionUtil.getNumberWithVariables(event, 'card')

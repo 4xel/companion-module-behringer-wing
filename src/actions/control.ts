@@ -1,4 +1,4 @@
-import { CompanionActionDefinitions, Regex } from '@companion-module/base'
+import { CompanionActionDefinitions } from '@companion-module/base'
 import { CompanionActionWithCallback } from './common.js'
 import { InstanceBaseExt } from '../types.js'
 import { WingConfig } from '../config.js'
@@ -230,7 +230,7 @@ export function createControlActions(self: InstanceBaseExt<WingConfig>): Compani
 					id: 'lamp',
 					default: '',
 					useVariables: true,
-					regex: Regex.PERCENT,
+					regex: undefined,
 					tooltip: 'Lamp light intensity (0-100%)',
 				},
 				{
@@ -239,7 +239,7 @@ export function createControlActions(self: InstanceBaseExt<WingConfig>): Compani
 					id: 'btns',
 					default: '',
 					useVariables: true,
-					regex: Regex.PERCENT,
+					regex: undefined,
 					tooltip: 'Button backlight intensity (0-100%)',
 				},
 				{
@@ -248,7 +248,7 @@ export function createControlActions(self: InstanceBaseExt<WingConfig>): Compani
 					id: 'leds',
 					default: '',
 					useVariables: true,
-					regex: Regex.PERCENT,
+					regex: undefined,
 					tooltip: 'Layer button LED intensity (5-100%)',
 				},
 				{
@@ -257,7 +257,7 @@ export function createControlActions(self: InstanceBaseExt<WingConfig>): Compani
 					id: 'meters',
 					default: '',
 					useVariables: true,
-					regex: Regex.PERCENT,
+					regex: undefined,
 					tooltip: 'Meter display intensity (0-100%)',
 				},
 				{
@@ -266,7 +266,7 @@ export function createControlActions(self: InstanceBaseExt<WingConfig>): Compani
 					id: 'rgbleds',
 					default: '',
 					useVariables: true,
-					regex: Regex.PERCENT,
+					regex: undefined,
 					tooltip: 'RGB LED color indicator intensity (0-100%)',
 				},
 				{
@@ -275,7 +275,7 @@ export function createControlActions(self: InstanceBaseExt<WingConfig>): Compani
 					id: 'chlcds',
 					default: '',
 					useVariables: true,
-					regex: Regex.PERCENT,
+					regex: undefined,
 					tooltip: 'Channel LCD screen intensity (5-100%)',
 				},
 				{
@@ -284,7 +284,7 @@ export function createControlActions(self: InstanceBaseExt<WingConfig>): Compani
 					id: 'chlcdctr',
 					default: '',
 					useVariables: true,
-					regex: Regex.PERCENT,
+					regex: undefined,
 					tooltip: 'Channel LCD screen contrast (0-100%)',
 				},
 				{
@@ -293,7 +293,7 @@ export function createControlActions(self: InstanceBaseExt<WingConfig>): Compani
 					id: 'chedit',
 					default: '',
 					useVariables: true,
-					regex: Regex.PERCENT,
+					regex: undefined,
 					tooltip: 'Channel edit strip LCD intensity (5-100%)',
 				},
 				{
@@ -302,7 +302,7 @@ export function createControlActions(self: InstanceBaseExt<WingConfig>): Compani
 					id: 'main',
 					default: '',
 					useVariables: true,
-					regex: Regex.PERCENT,
+					regex: undefined,
 					tooltip: 'Main touchscreen intensity (5-100%)',
 				},
 				{
@@ -311,7 +311,7 @@ export function createControlActions(self: InstanceBaseExt<WingConfig>): Compani
 					id: 'glow',
 					default: '',
 					useVariables: true,
-					regex: Regex.PERCENT,
+					regex: undefined,
 					tooltip: 'Under console ambient light intensity (0-100%)',
 				},
 				{
@@ -320,7 +320,7 @@ export function createControlActions(self: InstanceBaseExt<WingConfig>): Compani
 					id: 'patch',
 					default: '',
 					useVariables: true,
-					regex: Regex.PERCENT,
+					regex: undefined,
 					tooltip: 'Patch panel light intensity (0-100%)',
 				},
 				...FadeDurationChoice(),
