@@ -84,15 +84,14 @@ export class GainCompensationHandler extends EventEmitter {
 				const gain = extractValue(args)
 				if (gain === null) continue
 
-				const prev = this.gainCache.get(ch)
-				if (prev === gain) continue // no change
-
+				const changed = this.gainCache.get(ch) !== gain
 				this.gainCache.set(ch, gain)
 				this.emitChannelVariables(ch)
-				// Always re-check ChannelNeedsComp so the feedback stays live in all modes
+
 				if (this.refs.has(ch)) this.emit('check-feedbacks', ['channel-needs-comp'])
 
-				if (this.enabled && this.mode === 'auto' && this.refs.has(ch)) {
+				// Only schedule auto-comp when the value actually changed
+				if (changed && this.enabled && this.mode === 'auto' && this.refs.has(ch)) {
 					this.scheduleAutoComp(ch)
 				}
 				continue
