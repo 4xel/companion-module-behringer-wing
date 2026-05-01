@@ -674,6 +674,18 @@ export class VariableHandler extends EventEmitter {
 	}
 
 	processMessage(msgs: Set<OscMessage>): void {
+		// Fast path: emit gain and trim immediately, bypassing the batch debounce.
+		// All other variables go through the normal debounced path below.
+		const immediate: CompanionVariableValues = {}
+		for (const msg of msgs) {
+			const args = msg.args as osc.MetaArgument[]
+			const gainUpdates = this.updateGainVariables(msg.address, args[0]?.value as number)
+			if (gainUpdates) for (const { name, value } of gainUpdates) immediate[name] = value
+			const trimUpdates = this.updateStripInputVariables(msg.address, args[0])
+			if (trimUpdates) for (const { name, value } of trimUpdates) immediate[name] = value
+		}
+		if (Object.keys(immediate).length > 0) this.emit('update-variables', immediate)
+
 		msgs.forEach((msg) => this.messages.add(msg))
 		this.debounceUpdateVariables()
 	}
