@@ -579,8 +579,7 @@ function getGainCompChannelStripPreset(ch: number): CompanionButtonPresetDefinit
 		type: 'button',
 		style: {
 			// Full channel strip display matching the idea file layout:
-			// Name / G: gain / T: trim / Δ: delta
-			text: `$(wing:ch${ch}_name)\nG:$(wing:ch${ch}_gain)dB T:$(wing:ch${ch}_trim)dB\nΔ$(wing:ch${ch}_comp_delta)dB`,
+			text: `$(wing:ch${ch}_name)\nG: $(wing:ch${ch}_gain)dB \nT: $(wing:ch${ch}_trim)dB\nΔ$(wing:ch${ch}_comp_delta)dB`,
 			size: 'auto',
 			color: combineRgb(220, 220, 220),
 			bgcolor: combineRgb(20, 20, 40),
