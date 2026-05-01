@@ -138,7 +138,9 @@ export enum CommonActions {
 
 export function createCommonActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
 	const send = self.connection!.sendCommand.bind(self.connection)
-	const ensureLoaded = self.stateHandler!.ensureLoaded.bind(self.stateHandler)
+	const ensureLoaded = (path: string, arg?: string | number): void => {
+		self.connection?.sendCommand(path, arg).catch(() => {})
+	}
 	const state = self.stateHandler?.state
 	const logger = self.logger
 	if (!state) {

@@ -208,7 +208,9 @@ export enum FxActionId {
 
 export function createFxActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
 	const send = self.connection!.sendCommand.bind(self.connection)
-	const ensureLoaded = self.stateHandler!.ensureLoaded.bind(self.stateHandler)
+	const ensureLoaded = (path: string, arg?: string | number): void => {
+		self.connection?.sendCommand(path, arg).catch(() => {})
+	}
 	const state = self.stateHandler?.state
 	const transitions = self.transitions
 	if (!state) return {}
@@ -242,7 +244,7 @@ export function createFxActions(self: InstanceBaseExt<WingConfig>): CompanionAct
 			subscribe: (event) => {
 				const slot = getStringWithVariables(event, 'slot')
 				const slotNum = getNodeNumberFromID(slot)
-				self.stateHandler?.ensureLoaded(EffectCommands.FxMix(slotNum))
+				self.connection?.sendCommand(EffectCommands.FxMix(slotNum)).catch(() => {})
 			},
 		},
 

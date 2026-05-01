@@ -38,7 +38,9 @@ export function createControlActions(self: InstanceBaseExt<WingConfig>): Compani
 	const send = self.connection!.sendCommand.bind(self.connection)
 	const state = self.stateHandler?.state
 	if (!state) throw new Error('State handler or state is not available')
-	const ensureLoaded = self.stateHandler!.ensureLoaded.bind(self.stateHandler)
+	const ensureLoaded = (path: string, arg?: string | number): void => {
+		self.connection?.sendCommand(path, arg).catch(() => {})
+	}
 	const subscriptions = self.feedbackHandler?.subscriptions
 	if (!subscriptions) throw new Error('Feedback handler or subscriptions are not available')
 	const model = self.model
