@@ -11,6 +11,7 @@ import { getMuteGroupVariables } from './mutegroup.js'
 import { getShowControlVariables } from './showcontrol.js'
 import { getTalkbackVariables } from './talkback.js'
 import { getCompensationVariables } from './compensation.js'
+import { getStatusVariables } from './status.js'
 import { getUsbVariables } from './usb.js'
 import { getWliveVariables } from './wlive.js'
 
@@ -40,6 +41,7 @@ export function getAllVariables(model: ModelSpec): VariableDefinition[] {
 	variables.push(...getGpioVariables(model))
 	variables.push(...getTalkbackVariables(model))
 	variables.push(...getCompensationVariables(model))
+	variables.push(...getStatusVariables())
 
 	return variables
 }

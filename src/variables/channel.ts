@@ -38,6 +38,11 @@ export function getChannelVariables(model: ModelSpec): VariableDefinition[] {
 				path: Commands.Channel.SendOn(ch, bus),
 			})
 			variables.push({
+				variableId: `ch${ch}_bus${bus}_on`,
+				name: `Channel ${ch} to Bus ${bus} Send On (0/1)`,
+				path: Commands.Channel.SendOn(ch, bus),
+			})
+			variables.push({
 				variableId: `ch${ch}_bus${bus}_level`,
 				name: `Channel ${ch} to Bus ${bus} Level`,
 				path: Commands.Channel.SendLevel(ch, bus),
@@ -46,6 +51,11 @@ export function getChannelVariables(model: ModelSpec): VariableDefinition[] {
 				variableId: `ch${ch}_bus${bus}_pan`,
 				name: `Channel ${ch} to Bus ${bus} Pan`,
 				path: Commands.Channel.SendPan(ch, bus),
+			})
+			variables.push({
+				variableId: `ch${ch}_bus${bus}_mode`,
+				name: `Channel ${ch} to Bus ${bus} Mode (PRE/POST/GRP)`,
+				path: Commands.Channel.SendMode(ch, bus),
 			})
 		}
 		for (let main = 1; main <= model.mains; main++) {
@@ -87,6 +97,16 @@ export function getChannelVariables(model: ModelSpec): VariableDefinition[] {
 			variableId: `ch${ch}_alt`,
 			name: `Channel ${ch} Input Source (Main/Alt)`,
 			path: Commands.Channel.InputAltSource(ch),
+		})
+		variables.push({
+			variableId: `ch${ch}_src_grp`,
+			name: `Channel ${ch} Input Source Group`,
+			path: Commands.Channel.MainInputConnectionGroup(ch),
+		})
+		variables.push({
+			variableId: `ch${ch}_src_in`,
+			name: `Channel ${ch} Input Source Index`,
+			path: Commands.Channel.MainInputConnectionIndex(ch),
 		})
 	}
 

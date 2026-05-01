@@ -20,6 +20,10 @@ const RE_TALKBACK = /^\/cfg\/talk\/(A|B)\/(B|MX|M)(\d+)$/
 const RE_GPIO = /^\/\$ctl\/gpio\/(\d+)\/\$state$/
 const RE_CONTROL = /^\/\$ctl\/(lib|\$stat)\/(\$?\w+)/
 const RE_COLOR = /\/(\w+)\/(\d+)\/\$?col/
+const RE_SEND_MODE = /^\/ch\/(\d+)\/send\/(\d+)\/mode$/
+const RE_CONN_GRP = /^\/ch\/(\d+)\/in\/conn\/grp$/
+const RE_CONN_IN = /^\/ch\/(\d+)\/in\/conn\/in$/
+const RE_AES_STAT = /^\/([$\w]+)\/(A|B|C)\/stat$/
 
 export type VariableUpdate = { name: string; value: string | number }
 export class VariableHandler extends EventEmitter {
@@ -85,6 +89,9 @@ export class VariableHandler extends EventEmitter {
 				this.updateGpioVariables(path, args[0]?.value as number) ??
 				this.updateControlVariables(path, args[0]) ??
 				this.updateIoVariables(path, args[0]) ??
+				this.updateStatusVariables(path, args[0]?.value as string) ??
+				this.updateSendModeVariables(path, args[0]?.value as string) ??
+				this.updateInputPatchVariables(path, args[0]) ??
 				this.updateColorVariables(path, args[0]?.value as string) ??
 				this.updateFxVariables(path, args[0])
 
@@ -589,6 +596,37 @@ export class VariableHandler extends EventEmitter {
 		}
 
 		return [{ name: 'main_alt_status', value: isMain ? 'Main' : 'Alt' }]
+	}
+
+	private updateStatusVariables(path: string, value: string): VariableUpdate[] | undefined {
+		// AES50 link state: /$stat/A/stat, /$stat/B/stat, /$stat/C/stat
+		const aesMatch = path.match(RE_AES_STAT)
+		if (aesMatch) {
+			const port = aesMatch[2].toLowerCase()
+			return [{ name: `stat_aes50${port}`, value: value ?? '' }]
+		}
+		return undefined
+	}
+
+	private updateSendModeVariables(path: string, value: string): VariableUpdate[] | undefined {
+		// Send mode: /ch/N/send/B/mode → ch_N_bus_B_mode (PRE/POST/GRP)
+		const m = path.match(RE_SEND_MODE)
+		if (!m) return undefined
+		return [{ name: `ch${m[1]}_bus${m[2]}_mode`, value: value ?? '' }]
+	}
+
+	private updateInputPatchVariables(path: string, arg: OSCMetaArgument): VariableUpdate[] | undefined {
+		// Input source group: /ch/N/in/conn/grp → ch_N_src_grp
+		const grpMatch = path.match(RE_CONN_GRP)
+		if (grpMatch) {
+			return [{ name: `ch${grpMatch[1]}_src_grp`, value: (arg?.value as string) ?? '' }]
+		}
+		// Input source index: /ch/N/in/conn/in → ch_N_src_in
+		const inMatch = path.match(RE_CONN_IN)
+		if (inMatch) {
+			return [{ name: `ch${inMatch[1]}_src_in`, value: (arg?.value as string | number) ?? '' }]
+		}
+		return undefined
 	}
 
 	private updateColorVariables(path: string, value: string): VariableUpdate[] | undefined {
