@@ -143,6 +143,11 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Configuration | Talkback Mode | Set the mode of a talkback channel. |
 | Configuration | Talkback Monitor Dim | Set the the monitor dim amount of a talkback channel. |
 | Configuration | Talkback On | Enable or disable the on state of a talkback. |
+| Control | DAW: Fast Forward | Send fast-forward command to the connected DAW. |
+| Control | DAW: Play | Send play command to the connected DAW. |
+| Control | DAW: Record | Send record command to the connected DAW. |
+| Control | DAW: Rewind | Send rewind command to the connected DAW. |
+| Control | DAW: Stop | Send stop command to the connected DAW. |
 | Control | Recall Scene by Number | Recall scene in a show by its number |
 | Control | Send Library Action | Trigger a library action (Select and navigate scenes in a show) |
 | Control | Set GPIO Mode | Configure the mode of a GPIO |
@@ -150,6 +155,7 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Control | Set Light Intensities | Set the intensities of console lights. (leave empty for no change) |
 | Control | Set Selected | Set Selected Channel Strip |
 | Control | Set SOF | Set Sends on Fader |
+| Control | Trigger User Control | Trigger a Wing surface user control (soft button / encoder assignment) via /$ctl/usr/N. |
 | fx | FX Slot - Adjust Delay Parameter (Relative) | Nudge a delay parameter up or down. Use with encoder knobs on StreamDeck+. |
 | fx | FX Slot - Adjust Mix (Relative) | Nudge the wet/dry mix up or down. Use with encoder knobs on StreamDeck+. |
 | fx | FX Slot - Adjust Pitch / Modulation Parameter (Relative) | Nudge a pitch or modulation parameter up or down. Use with encoder knobs on StreamDeck+. |

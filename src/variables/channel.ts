@@ -31,6 +31,21 @@ export function getChannelVariables(model: ModelSpec): VariableDefinition[] {
 			name: `Channel ${ch} Pan`,
 			path: Commands.Channel.Pan(ch),
 		})
+		variables.push({
+			variableId: `ch${ch}_wid`,
+			name: `Channel ${ch} Stereo Width`,
+			path: Commands.Channel.Width(ch),
+		})
+		variables.push({
+			variableId: `ch${ch}_trim`,
+			name: `Channel ${ch} Input Trim (dB)`,
+			path: Commands.Channel.InputTrim(ch),
+		})
+		variables.push({
+			variableId: `ch${ch}_inv`,
+			name: `Channel ${ch} Phase Invert (0/1)`,
+			path: Commands.Channel.InputInvert(ch),
+		})
 		for (let bus = 1; bus <= model.busses; bus++) {
 			variables.push({
 				variableId: `ch${ch}_bus${bus}_mute`,

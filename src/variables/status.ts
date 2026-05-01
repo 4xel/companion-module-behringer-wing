@@ -12,5 +12,6 @@ export function getStatusVariables(): VariableDefinition[] {
 		{ variableId: 'stat_clock_lock', name: 'Clock Lock State', path: StatusCommands.ClockLock() },
 		{ variableId: 'stat_usb', name: 'USB Drive State', path: StatusCommands.USBState() },
 		{ variableId: 'stat_solo', name: 'Solo Active (0/1)', path: StatusCommands.Solo() },
+		{ variableId: 'stat_stageconnect', name: 'StageConnect Status', path: StatusCommands.StageConnectStatus() },
 	]
 }

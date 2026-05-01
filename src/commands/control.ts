@@ -16,6 +16,34 @@ export namespace ControlCommands {
 		return `${StatusNode()}/selidx`
 	}
 
+	export function DawNode(): string {
+		return `${Node()}/daw`
+	}
+
+	export function DawPlay(): string {
+		return `${DawNode()}/play`
+	}
+
+	export function DawStop(): string {
+		return `${DawNode()}/stop`
+	}
+
+	export function DawRecord(): string {
+		return `${DawNode()}/rec`
+	}
+
+	export function DawRewind(): string {
+		return `${DawNode()}/rwd`
+	}
+
+	export function DawFastForward(): string {
+		return `${DawNode()}/ff`
+	}
+
+	export function UserControl(n: number): string {
+		return `${Node()}/usr/${n}`
+	}
+
 	export function LibraryNode(): string {
 		return `${Node()}/lib`
 	}

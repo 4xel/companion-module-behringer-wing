@@ -185,6 +185,13 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`ch${i}-headamp-gain`] = getHeadampGainPreset(i)
 	}
 
+	// DAW transport
+	presets['daw-play'] = getDawPreset(OtherActionId.DawPlay, '▶ DAW\nPlay', combineRgb(0, 140, 0))
+	presets['daw-stop'] = getDawPreset(OtherActionId.DawStop, '⏹ DAW\nStop', combineRgb(60, 60, 60))
+	presets['daw-record'] = getDawPreset(OtherActionId.DawRecord, '⏺ DAW\nRec', combineRgb(180, 0, 0))
+	presets['daw-rewind'] = getDawPreset(OtherActionId.DawRewind, '⏮ DAW\nRwd', combineRgb(0, 60, 120))
+	presets['daw-ff'] = getDawPreset(OtherActionId.DawFastForward, '⏭ DAW\nFF', combineRgb(0, 60, 120))
+
 	presets[`lights-bright`] = getLightPresetBright()
 	presets[`lights-dark`] = getLightPresetDark()
 
@@ -558,6 +565,17 @@ function getGainCompChannelPreset(ch: number): CompanionButtonPresetDefinition {
 				style: { bgcolor: combineRgb(200, 120, 0), color: combineRgb(0, 0, 0) },
 			},
 		],
+	}
+}
+
+function getDawPreset(actionId: OtherActionId, label: string, bgcolor: number): CompanionButtonPresetDefinition {
+	return {
+		name: label.replace('\n', ' '),
+		category: 'DAW',
+		type: 'button',
+		style: { text: label, size: 'auto', color: combineRgb(255, 255, 255), bgcolor },
+		steps: [{ down: [{ actionId, options: {} }], up: [] }],
+		feedbacks: [],
 	}
 }
 
