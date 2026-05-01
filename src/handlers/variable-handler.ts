@@ -49,7 +49,7 @@ export class VariableHandler extends EventEmitter {
 				this.messages.clear()
 			},
 			{
-				wait: updateRate ?? 1000,
+				wait: updateRate ?? 50,
 				before: false,
 				after: true,
 			},
@@ -674,27 +674,6 @@ export class VariableHandler extends EventEmitter {
 	}
 
 	processMessage(msgs: Set<OscMessage>): void {
-		// Emit gain and trim immediately on every message so display stays live.
-		// Uses args[0] for 1-arg /*S pushes (actual dB) and args[2] for 3-arg
-		// full responses (actual dB in third slot). Ignores NaN/undefined safely.
-		const immediate: CompanionVariableValues = {}
-		for (const msg of msgs) {
-			const args = msg.args as osc.MetaArgument[]
-			const gainMatch = msg.address.match(RE_GAIN)
-			if (gainMatch) {
-				const raw = (args.length >= 3 ? args[2] : args[0])?.value
-				const v = Number(raw)
-				if (isFinite(v)) immediate[`${gainMatch[1]}${gainMatch[2]}_gain`] = this.round(v, 1)
-			}
-			const trimMatch = msg.address.match(RE_STRIP_TRIM)
-			if (trimMatch) {
-				const raw = (args.length >= 3 ? args[2] : args[0])?.value
-				const v = Number(raw)
-				if (isFinite(v)) immediate[`${trimMatch[1]}${trimMatch[2]}_trim`] = this.round(v, 1)
-			}
-		}
-		if (Object.keys(immediate).length > 0) this.emit('update-variables', immediate)
-
 		msgs.forEach((msg) => this.messages.add(msg))
 		this.debounceUpdateVariables()
 	}
