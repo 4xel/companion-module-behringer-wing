@@ -53,12 +53,6 @@ export class GainCompensationHandler extends EventEmitter {
 	private snapshotTakenAt?: Date
 	private snapshotTimer?: NodeJS.Timeout
 
-	// Stale-push guard: after writing trim, record the expected value.
-	// Ignore incoming trim pushes that don't match within tolerance (they are stale
-	// /*S pushes that arrived before Wing processed our command).
-	// Delete the entry when the Wing confirms our value (push matches expected).
-	private pendingSetTrim = new Map<number, number>()
-
 	// Per-channel debounce for reactive auto-compensation
 	private compDebounce = new Map<number, NodeJS.Timeout>()
 
@@ -103,13 +97,9 @@ export class GainCompensationHandler extends EventEmitter {
 				const trim = extractValue(args)
 				if (trim === null) continue
 
-				// Stale-push guard: if we just wrote trim, check if Wing confirmed our value
-				const pending = this.pendingSetTrim.get(ch)
-				if (pending !== undefined) {
-					if (Math.abs(trim - pending) > TRIM_TOLERANCE) continue // stale — ignore
-					this.pendingSetTrim.delete(ch) // Wing confirmed our set
-				}
-
+				// Wing does not push /*S updates for trim values we set via OSC, so there
+				// are no stale pushes to guard against. Accept every incoming trim message
+				// unconditionally — these are all query responses (echo from sendCommand).
 				this.trimCache.set(ch, trim)
 				this.emitChannelVariables(ch)
 				if (this.refs.has(ch)) this.emit('check-feedbacks', ['channel-needs-comp'])
@@ -234,13 +224,7 @@ export class GainCompensationHandler extends EventEmitter {
 
 		const newTrim = Math.max(TRIM_MIN, Math.min(TRIM_MAX, ref.trim - delta))
 
-		// Record expected value for stale-push guard
-		this.pendingSetTrim.set(ch, newTrim)
-		setTimeout(() => {
-			if (this.pendingSetTrim.get(ch) === newTrim) this.pendingSetTrim.delete(ch)
-		}, 500)
-
-		// Update local cache immediately (Wing won't echo set commands)
+		// Update local cache immediately (Wing won't echo set commands via /*S)
 		this.trimCache.set(ch, newTrim)
 		this.emit('send', ChannelCommands.InputTrim(ch), newTrim)
 		this.logger?.debug(`GainComp: ch${ch} Δgain=${delta.toFixed(2)}dB → trim=${newTrim.toFixed(2)}dB`)
@@ -291,6 +275,14 @@ export class GainCompensationHandler extends EventEmitter {
 	}
 
 	private addChannelVars(ch: number, vars: CompanionVariableValues): void {
+		// Emit gain and trim directly so the strip preset updates without waiting for the
+		// variable handler's debounce (which can be up to 1000ms).
+		const gain = this.gainCache.get(ch)
+		if (gain !== undefined) vars[`ch${ch}_gain`] = Math.round(gain * 10) / 10
+
+		const trim = this.trimCache.get(ch)
+		if (trim !== undefined) vars[`ch${ch}_trim`] = Math.round(trim * 10) / 10
+
 		const delta = this.getCompDelta(ch)
 		vars[`ch${ch}_comp_delta`] = delta !== undefined ? (delta >= 0 ? '+' : '') + delta.toFixed(1) : ''
 		vars[`ch${ch}_trim_ok`] = this.isChannelCompOk(ch) ? 1 : 0
