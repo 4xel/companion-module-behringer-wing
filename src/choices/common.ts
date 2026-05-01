@@ -553,10 +553,10 @@ export function GetFaderDeltaInputFieldWithVariables(
 	CompanionInputFieldDropdown,
 ] {
 	isVisibleExpression = isVisibleExpression ?? 'true'
-	const number = GetNumberField(name ? name + ' (dB)' : 'Level (dB)', id, -154, 154, 1, 0, true)
+	const number = GetNumberField(name ? name + ' (dB)' : 'Level (dB)', id, -154, 154, 1, 1, true)
 	number.isVisibleExpression = `!$(options:${id}_use_variables) && !$(options:${id}_use_percentage) && (${isVisibleExpression})`
 
-	const percentNumber = GetNumberField(name ? name + ' (%)' : 'Level (%)', `${id}_percent`, -100, 100, 1, 0, true)
+	const percentNumber = GetNumberField(name ? name + ' (%)' : 'Level (%)', `${id}_percent`, -100, 100, 1, 1, true)
 	percentNumber.isVisibleExpression = `!$(options:${id}_use_variables) && $(options:${id}_use_percentage) && (${isVisibleExpression})`
 
 	const percentVariables = {
