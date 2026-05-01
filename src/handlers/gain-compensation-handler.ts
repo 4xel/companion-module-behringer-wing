@@ -80,17 +80,17 @@ export class GainCompensationHandler extends EventEmitter {
 				const gain = extractValue(args)
 				if (gain === null) continue
 
-				const changed = this.gainCache.get(ch) !== gain
 				this.gainCache.set(ch, gain)
 				this.emitChannelVariables(ch)
 
-				if (this.refs.has(ch)) this.emit('check-feedbacks', ['channel-needs-comp'])
-
-				// Apply compensation immediately on every gain change — matches reference
-				// app behaviour. No debounce: a debounce delays trim writes until the knob
-				// pauses, making it appear to "stop working" during rapid changes.
-				if (changed && this.enabled && this.mode === 'auto' && this.refs.has(ch)) {
-					this.applyCompensationForChannel(ch)
+				if (this.refs.has(ch)) {
+					this.emit('check-feedbacks', ['channel-needs-comp'])
+					// Fire compensation whenever trim is out of sync — not just on value change.
+					// Using isChannelCompOk as the gate handles all cases: new gain, gain
+					// returning to ref with stale trim, or trimCache corrupted by a stale echo.
+					if (this.enabled && this.mode === 'auto' && !this.isChannelCompOk(ch)) {
+						this.applyCompensationForChannel(ch)
+					}
 				}
 				continue
 			}
@@ -216,9 +216,11 @@ export class GainCompensationHandler extends EventEmitter {
 			return
 		}
 		const delta = currentGain - ref.gain
-		if (Math.abs(delta) < 0.01) return
-
 		const newTrim = Math.max(TRIM_MIN, Math.min(TRIM_MAX, ref.trim - delta))
+
+		// Skip if trim is already correct within tolerance (called via isChannelCompOk gate,
+		// so this is just a safety guard for floating-point edge cases)
+		if (Math.abs(newTrim - (this.trimCache.get(ch) ?? 0)) < TRIM_TOLERANCE) return
 
 		// Update local cache immediately. Block 3-arg query echos for 1s so that
 		// queued echos from earlier rapid gain changes cannot corrupt trimCache after
