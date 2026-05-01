@@ -34,13 +34,14 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`ch${i}-cut`] = getFaderPreset('ch', i, -144, 'Cut')
 		presets[`ch${i}-phantom`] = getPhantomPreset('ch', i)
 		presets[`ch${i}-reset`] = getChannelResetPreset('ch', i)
-		presets[`ch${i}-batch-reset`] = getBatchResetPreset('ch', i)
 		presets[`ch${i}-batch-kill-sends`] = getBatchKillSendsPreset('ch', i)
+		presets[`ch${i}-fader-display`] = getFaderDisplayPreset('ch', i)
 	}
 
 	for (let i = 1; i <= model.busses; i++) {
 		for (let ch = 1; ch <= Math.min(model.channels, 8); ch++) {
 			presets[`ch${ch}-bus${i}-send-mode`] = getSendModePreset(ch, i)
+			presets[`ch${ch}-bus${i}-send-level`] = getSendLevelKnobPreset(ch, i)
 		}
 	}
 
@@ -54,6 +55,7 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`aux${i}-cut`] = getFaderPreset('aux', i, -144, 'Cut')
 		presets[`aux${i}-phantom`] = getPhantomPreset('aux', i)
 		presets[`aux${i}-reset`] = getChannelResetPreset('aux', i)
+		presets[`aux${i}-fader-display`] = getFaderDisplayPreset('aux', i)
 	}
 
 	for (let i = 1; i <= model.busses; i++) {
@@ -62,6 +64,7 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`bus${i}-sof-button`] = getSofPresets('bus', i)
 		presets[`bus${i}-nominal`] = getFaderPreset('bus', i, 0, 'Nominal')
 		presets[`bus${i}-cut`] = getFaderPreset('bus', i, -144, 'Cut')
+		presets[`bus${i}-fader-display`] = getFaderDisplayPreset('bus', i)
 	}
 
 	for (let i = 1; i <= model.matrices; i++) {
@@ -70,6 +73,7 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`mtx${i}-sof-button`] = getSofPresets('mtx', i)
 		presets[`mtx${i}-nominal`] = getFaderPreset('mtx', i, 0, 'Nominal')
 		presets[`mtx${i}-cut`] = getFaderPreset('mtx', i, -144, 'Cut')
+		presets[`mtx${i}-fader-display`] = getFaderDisplayPreset('mtx', i)
 	}
 
 	for (let i = 1; i <= model.mains; i++) {
@@ -78,6 +82,7 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`main${i}-sof-button`] = getSofPresets('main', i)
 		presets[`main${i}-nominal`] = getFaderPreset('main', i, 0, 'Nominal')
 		presets[`main${i}-cut`] = getFaderPreset('main', i, -144, 'Cut')
+		presets[`main${i}-fader-display`] = getFaderDisplayPreset('main', i)
 	}
 
 	for (let i = 1; i <= model.dcas; i++) {
@@ -86,6 +91,8 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`dca${i}-nominal`] = getFaderPreset('dca', i, 0, 'Nominal')
 		presets[`dca${i}-cut`] = getFaderPreset('dca', i, -144, 'Cut')
 		presets[`dca${i}-momentary-mute`] = getDcaMomentaryMutePreset(i)
+		presets[`dca${i}-mute-toggle`] = getDcaToggleMutePreset(i)
+		presets[`dca${i}-fader-display`] = getFaderDisplayPreset('dca', i)
 	}
 
 	for (let i = 1; i <= model.mutegroups; i++) {
@@ -575,7 +582,7 @@ function getGainCompChannelStripPreset(ch: number): CompanionButtonPresetDefinit
 		style: {
 			// Full channel strip display matching the idea file layout:
 			text: `$(wing:ch${ch}_name)\nG: $(wing:ch${ch}_gain)dB \nT: $(wing:ch${ch}_trim)dB\nΔ$(wing:ch${ch}_comp_delta)dB`,
-			size: 'auto',
+			size: '14',
 			color: combineRgb(220, 220, 220),
 			bgcolor: combineRgb(20, 20, 40),
 		},
@@ -1641,24 +1648,6 @@ function getChannelResetPreset(base: string, num: number): CompanionButtonPreset
 	}
 }
 
-function getBatchResetPreset(base: string, num: number): CompanionButtonPresetDefinition {
-	const path = `/${base}/${num}`
-	const name = `${base.toUpperCase()}${num}`
-	return {
-		name: `${name} Batch Reset`,
-		category: 'Channel Strip',
-		type: 'button',
-		style: {
-			text: `${name}\nBatch\nReset`,
-			size: 'auto',
-			color: combineRgb(255, 255, 255),
-			bgcolor: combineRgb(100, 0, 0),
-		},
-		steps: [{ down: [{ actionId: CommonActions.ResetChannel, options: { sel: path } }], up: [] }],
-		feedbacks: [],
-	}
-}
-
 function getBatchKillSendsPreset(base: string, num: number): CompanionButtonPresetDefinition {
 	const path = `/${base}/${num}`
 	const name = `${base.toUpperCase()}${num}`
@@ -1829,6 +1818,160 @@ function getSceneDirectPreset(i: number): CompanionButtonPresetDefinition {
 				feedbackId: FeedbackId.ActiveScene,
 				options: { scene: String(i) },
 				style: { color: combineRgb(0, 0, 0), bgcolor: combineRgb(0, 220, 0) },
+			},
+		],
+	}
+}
+
+////////////////////////////////////////////////////////////////
+// DCA toggle mute preset
+////////////////////////////////////////////////////////////////
+
+function getDcaToggleMutePreset(n: number): CompanionButtonPresetDefinition {
+	const path = `/dca/${n}`
+	return {
+		name: `DCA${n} Mute Toggle`,
+		category: 'DCA',
+		type: 'button',
+		style: {
+			text: `DCA${n}\nMute`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(60, 0, 80),
+		},
+		steps: [
+			{
+				down: [{ actionId: CommonActions.SetMute, options: { sel: path, mute: -1 } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.Mute,
+				options: { sel: path, mute: 1 },
+				style: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(255, 0, 0) },
+			},
+		],
+	}
+}
+
+////////////////////////////////////////////////////////////////
+// Fader display preset (rotary knob with live level bar)
+////////////////////////////////////////////////////////////////
+
+function getFaderDisplayPreset(base: string, num: number): CompanionButtonPresetDefinition {
+	const path = `/${base}/${num}`
+	const BASE = base.toUpperCase()
+	return {
+		name: `${BASE}${num} Fader Display`,
+		category: 'Fader',
+		type: 'button',
+		style: {
+			text: `${BASE}${num}`,
+			size: '14',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(10, 20, 40),
+		},
+		options: { rotaryActions: true },
+		steps: [
+			{
+				down: [],
+				up: [],
+				rotate_left: [
+					{
+						actionId: CommonActions.DeltaFader,
+						options: {
+							sel: path,
+							delta: -3,
+							delta_use_variables: false,
+							delta_use_percentage: false,
+							fadeDuration: 0,
+						},
+					},
+				],
+				rotate_right: [
+					{
+						actionId: CommonActions.DeltaFader,
+						options: {
+							sel: path,
+							delta: 3,
+							delta_use_variables: false,
+							delta_use_percentage: false,
+							fadeDuration: 0,
+						},
+					},
+				],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.FaderDisplay,
+				options: { sel: path, sel_use_variables: false },
+			},
+		],
+	}
+}
+
+////////////////////////////////////////////////////////////////
+// Channel → Bus send level rotary preset
+////////////////////////////////////////////////////////////////
+
+function getSendLevelKnobPreset(ch: number, bus: number): CompanionButtonPresetDefinition {
+	const src = `/ch/${ch}`
+	const dest = `/bus/${bus}`
+	return {
+		name: `CH${ch} → BUS${bus} Send`,
+		category: 'Bus Sends',
+		type: 'button',
+		style: {
+			text: `CH${ch}\n→B${bus}\nSend`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 40, 60),
+		},
+		options: { rotaryActions: true },
+		steps: [
+			{
+				down: [{ actionId: CommonActions.SetSendMute, options: { src, dest, mute: -1 } }],
+				up: [],
+				rotate_left: [
+					{
+						actionId: CommonActions.DeltaSendFader,
+						options: {
+							src,
+							dest,
+							delta: -1,
+							delta_use_variables: false,
+							delta_use_percentage: false,
+							fadeDuration: 0,
+						},
+					},
+				],
+				rotate_right: [
+					{
+						actionId: CommonActions.DeltaSendFader,
+						options: {
+							src,
+							dest,
+							delta: 1,
+							delta_use_variables: false,
+							delta_use_percentage: false,
+							fadeDuration: 0,
+						},
+					},
+				],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.SendMute,
+				options: { src, dest, src_use_variables: false, dest_use_variables: false, mute: 0 },
+				style: { bgcolor: combineRgb(0, 40, 60) },
+			},
+			{
+				feedbackId: FeedbackId.SendMute,
+				options: { src, dest, src_use_variables: false, dest_use_variables: false, mute: 1 },
+				style: { bgcolor: combineRgb(60, 0, 0) },
 			},
 		],
 	}

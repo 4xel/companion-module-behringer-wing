@@ -65,6 +65,7 @@ export enum FeedbackId {
 	GainCompSnapshotExists = 'gain-comp-snapshot-exists',
 	ChannelNeedsComp = 'channel-needs-comp',
 	GainDisplay = 'ch-gain-display',
+	FaderDisplay = 'fader-display',
 }
 
 function subscribeFeedback(
@@ -953,6 +954,54 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 				} as any
 			},
 			subscribe: () => {},
+			unsubscribe: () => {},
+		},
+
+		[FeedbackId.FaderDisplay]: {
+			type: 'boolean',
+			name: 'Fader - Live Level Display',
+			description: 'Shows current fader level with a visual bar. Use on fader display presets.',
+			defaultStyle: {},
+			options: [
+				...GetDropdownWithVariables('Strip', 'sel', [
+					...state.namedChoices.channels,
+					...state.namedChoices.auxes,
+					...state.namedChoices.busses,
+					...state.namedChoices.matrices,
+					...state.namedChoices.mains,
+					...state.namedChoices.dcas,
+				]),
+			],
+			callback: (event: CompanionFeedbackInfo) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const fdrPath = `${sel}/fdr`
+				const raw = _self.stateHandler?.state?.get(fdrPath)
+				const db = typeof raw === 'number' ? (raw as number) : undefined
+				const rawName = _self.stateHandler?.state?.get(`${sel}/$name`) ?? _self.stateHandler?.state?.get(`${sel}/name`)
+				const name: string = typeof rawName === 'string' ? rawName : sel.replace(/^\//, '').toUpperCase()
+
+				let bar = '░░░░░░░░'
+				let color = combineRgb(200, 200, 200)
+				if (db !== undefined) {
+					const filled = Math.max(0, Math.min(8, Math.round(((db + 60) / 70) * 8)))
+					bar = '█'.repeat(filled) + '░'.repeat(8 - filled)
+					if (db >= 0) color = combineRgb(255, 220, 0)
+					else if (db >= -12) color = combineRgb(100, 220, 100)
+					else if (db >= -40) color = combineRgb(180, 220, 100)
+					else color = combineRgb(150, 150, 150)
+				}
+				const dbStr = db !== undefined ? (db === -144 ? '−∞' : `${db >= 0 ? '+' : ''}${db.toFixed(1)}`) : '---'
+				return {
+					text: `${name}\n${bar}\n${dbStr}dB`,
+					color,
+					size: '14',
+				} as any
+			},
+			subscribe: (event: CompanionFeedbackInfo) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				ensureLoaded(`${sel}/fdr`)
+				ensureLoaded(`${sel}/$name`)
+			},
 			unsubscribe: () => {},
 		},
 	}
