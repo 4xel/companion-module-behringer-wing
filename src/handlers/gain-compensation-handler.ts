@@ -80,7 +80,9 @@ export class GainCompensationHandler extends EventEmitter {
 				const gain = extractValue(args)
 				if (gain === null) continue
 
+				const prev = this.gainCache.get(ch)
 				this.gainCache.set(ch, gain)
+				if (prev !== gain) this.logger?.info(`[gain] ch${ch}: ${prev}→${gain} (args:${args.length})`)
 				this.emitChannelVariables(ch)
 
 				if (this.refs.has(ch)) {
