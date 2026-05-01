@@ -29,6 +29,21 @@ import { IoCommands } from './commands/io.js'
 
 import { getCardsChoices, getCardsStatusChoices, getCardsActionChoices } from './choices/cards.js'
 import { EffectCommands, resolveInsertOnPath } from './commands/effect.js'
+import { WingState } from './state/state.js'
+
+/**
+ * Extract the actual value from a Wing state entry.
+ * Wing stores the raw OSC args array per path:
+ *   1-arg (/*S push): [actual_value]
+ *   3-arg (query):    [display_string, normalized, actual_value]
+ * Always pick args[2] for 3-arg and args[0] for 1-arg.
+ */
+function getActualFromState(path: string, state: WingState): number | undefined {
+	const args = state.get(path)
+	if (!args || args.length === 0) return undefined
+	const raw = args.length >= 3 ? args[2]?.value : args[0]?.value
+	return typeof raw === 'number' ? raw : undefined
+}
 
 type CompanionFeedbackWithCallback = SetRequired<
 	CompanionBooleanFeedbackDefinition,
@@ -975,11 +990,11 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 			],
 			callback: (event: CompanionFeedbackInfo) => {
 				const sel = ActionUtil.getStringWithVariables(event, 'sel')
-				const fdrPath = `${sel}/fdr`
-				const raw = _self.stateHandler?.state?.get(fdrPath)
-				const db = typeof raw === 'number' ? (raw as number) : undefined
-				const rawName = _self.stateHandler?.state?.get(`${sel}/$name`) ?? _self.stateHandler?.state?.get(`${sel}/name`)
-				const name: string = typeof rawName === 'string' ? rawName : sel.replace(/^\//, '').toUpperCase()
+				const st = _self.stateHandler?.state
+				if (!st) return false
+				const db = getActualFromState(`${sel}/fdr`, st)
+				const nameRaw = (st.get(`${sel}/$name`) ?? st.get(`${sel}/name`))?.[0]?.value
+				const name: string = typeof nameRaw === 'string' ? nameRaw : sel.replace(/^\//, '').toUpperCase()
 
 				let bar = '░░░░░░░░'
 				let color = combineRgb(200, 200, 200)
@@ -1030,8 +1045,9 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 			],
 			callback: (event: CompanionFeedbackInfo) => {
 				const sel = ActionUtil.getStringWithVariables(event, 'sel')
-				const raw = _self.stateHandler?.state?.get(`${sel}/$col`) ?? _self.stateHandler?.state?.get(`${sel}/col`)
-				const idx = typeof raw === 'number' ? Math.round(raw) : 0
+				const st = _self.stateHandler?.state
+				if (!st) return {}
+				const idx = Math.round(getActualFromState(`${sel}/$col`, st) ?? getActualFromState(`${sel}/col`, st) ?? 0)
 				return { bgcolor: WING_STRIP_COLOURS[idx] ?? combineRgb(40, 40, 40) }
 			},
 			subscribe: (event: CompanionFeedbackInfo) => {
