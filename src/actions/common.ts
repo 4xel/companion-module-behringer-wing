@@ -128,6 +128,7 @@ export enum CommonActions {
 	TakeGainSnapshot = 'take-gain-snapshot',
 	EnableGainComp = 'enable-gain-comp',
 	DisableGainComp = 'disable-gain-comp',
+	ToggleGainComp = 'toggle-gain-comp',
 	CompensateChannel = 'compensate-channel',
 
 	// Batch multi-parameter
@@ -1629,6 +1630,28 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 			options: [],
 			callback: async () => {
 				self.gainCompHandler?.disable()
+			},
+		},
+
+		[CommonActions.ToggleGainComp]: {
+			name: 'Gain Comp - Toggle',
+			description:
+				'Enable compensation in the selected mode if not already active in that mode, otherwise disable. State-aware — safe to use on a single-step button.',
+			options: [
+				...GetDropdownWithVariables('Mode', 'mode', [
+					{ id: 'auto', label: 'Auto (reactive)' },
+					{ id: 'manual', label: 'Manual (on demand)' },
+				]),
+			],
+			callback: async (event) => {
+				const mode = ActionUtil.getStringWithVariables(event, 'mode') as 'auto' | 'manual'
+				const handler = self.gainCompHandler
+				if (!handler) return
+				if (handler.isEnabled() && handler.getMode() === mode) {
+					handler.disable()
+				} else {
+					handler.enable(mode)
+				}
 			},
 		},
 

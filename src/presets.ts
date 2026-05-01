@@ -522,14 +522,9 @@ function getGainCompTogglePreset(mode: 'auto' | 'manual'): CompanionButtonPreset
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(40, 40, 40),
 		},
-		options: { stepAutoProgress: true },
 		steps: [
 			{
-				down: [{ actionId: CommonActions.EnableGainComp, options: { mode } }],
-				up: [],
-			},
-			{
-				down: [{ actionId: CommonActions.DisableGainComp, options: {} }],
+				down: [{ actionId: CommonActions.ToggleGainComp, options: { mode } }],
 				up: [],
 			},
 		],
