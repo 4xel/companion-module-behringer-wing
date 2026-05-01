@@ -716,6 +716,23 @@ export function getSendModeCommand(src: string, dest: string): string {
 	return ''
 }
 
+export function getEqNode(sel: string): string {
+	const num = getNodeNumberFromID(sel)
+	if (sel.startsWith('/ch')) return ChannelCommands.EqNode(num)
+	if (sel.startsWith('/aux')) return AuxCommands.EqNode(num)
+	if (sel.startsWith('/bus')) return BusCommands.EqNode(num)
+	if (sel.startsWith('/main')) return MainCommands.EqNode(num)
+	if (sel.startsWith('/mtx')) return MatrixCommands.EqNode(num)
+	return ''
+}
+
+export function getBusSendLevelCommand(sel: string, bus: number): string {
+	const num = getNodeNumberFromID(sel)
+	if (sel.startsWith('/ch')) return ChannelCommands.SendLevel(num, bus)
+	if (sel.startsWith('/aux')) return AuxCommands.SendLevel(num, bus)
+	return ''
+}
+
 export function getStringFromStripIndex(index: number): string {
 	if (index === -1) {
 		return 'current'

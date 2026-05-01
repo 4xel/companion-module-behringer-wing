@@ -82,9 +82,11 @@ export class GainCompensationHandler extends EventEmitter {
 
 				this.gainCache.set(ch, gain)
 				this.emitChannelVariables(ch)
+				// Always refresh gain display feedback, even without snapshot
+				this.emit('check-feedbacks', ['ch-gain-display'])
 
 				if (this.refs.has(ch)) {
-					this.emit('check-feedbacks', ['channel-needs-comp'])
+					this.emit('check-feedbacks', ['channel-needs-comp', 'ch-gain-display'])
 					if (this.enabled && this.mode === 'auto' && !this.isChannelCompOk(ch)) {
 						this.applyCompensationForChannel(ch)
 					}

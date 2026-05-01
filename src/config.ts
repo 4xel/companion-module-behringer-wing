@@ -187,11 +187,11 @@ export function GetConfigFields(_self: InstanceBaseExt<WingConfig>): SomeCompani
 			type: 'number',
 			id: 'subscriptionInterval',
 			label: 'Subscription Interval (ms)',
-			tooltip: 'Time in milliseconds to wait between subscription requests.',
+			tooltip: 'How often to renew the /*S subscription. Lower = harder to steal. 500ms recommended.',
 			width: 6,
 			min: 100,
 			max: 9999,
-			default: 9000,
+			default: 500,
 			isVisibleExpression: `$(options:show-advanced-options) == true`,
 		},
 		{

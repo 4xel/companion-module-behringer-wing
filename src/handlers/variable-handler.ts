@@ -81,24 +81,31 @@ export class VariableHandler extends EventEmitter {
 			const path = message.address
 			const args = message.args as osc.MetaArgument[]
 
+			// Wing response formats:
+			//   /*S push  (1 arg):  [actual_value:f/i]
+			//   query     (3 args): [display_string:s, normalized:f, actual_value:f/i]
+			// Always extract the actual value from args[2] when 3 args are present.
+			const actualArg = args.length >= 3 ? args[2] : args[0]
+			const actualValue = actualArg?.value
+
 			const result =
 				this.updateNameVariables(path, args[0]?.value as string) ??
-				this.updateGainVariables(path, args[0]?.value as number) ??
-				this.updateMuteVariables(path, args[0]?.value as number) ??
-				this.updateFaderVariables(path, args[0]?.value as number) ??
-				this.updatePanoramaVariables(path, args[0]?.value as number) ??
-				this.updateUsbVariables(path, args[0]) ??
-				this.updateSdVariables(path, args[0]) ??
-				this.updateTalkbackVariables(path, args[0]) ??
-				this.updateGpioVariables(path, args[0]?.value as number) ??
-				this.updateControlVariables(path, args[0]) ??
-				this.updateIoVariables(path, args[0]) ??
-				this.updateStatusVariables(path, args[0]?.value as string) ??
-				this.updateSendModeVariables(path, args[0]?.value as string) ??
-				this.updateInputPatchVariables(path, args[0]) ??
-				this.updateStripInputVariables(path, args[0]) ??
-				this.updateColorVariables(path, args[0]?.value as string) ??
-				this.updateFxVariables(path, args[0])
+				this.updateGainVariables(path, actualValue as number) ??
+				this.updateMuteVariables(path, actualValue as number) ??
+				this.updateFaderVariables(path, actualValue as number) ??
+				this.updatePanoramaVariables(path, actualValue as number) ??
+				this.updateUsbVariables(path, actualArg) ??
+				this.updateSdVariables(path, actualArg) ??
+				this.updateTalkbackVariables(path, actualArg) ??
+				this.updateGpioVariables(path, actualValue as number) ??
+				this.updateControlVariables(path, actualArg) ??
+				this.updateIoVariables(path, actualArg) ??
+				this.updateStatusVariables(path, actualValue as string) ??
+				this.updateSendModeVariables(path, actualValue as string) ??
+				this.updateInputPatchVariables(path, actualArg) ??
+				this.updateStripInputVariables(path, actualArg) ??
+				this.updateColorVariables(path, actualValue as string) ??
+				this.updateFxVariables(path, actualArg)
 
 			if (result) {
 				updates.push(...result)

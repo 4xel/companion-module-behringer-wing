@@ -44,4 +44,20 @@ export const UpgradeScripts: CompanionStaticUpgradeScript<WingConfig>[] = [
 			updatedFeedbacks,
 		}
 	}) as CompanionStaticUpgradeScript<WingConfig>,
+
+	// Reset subscriptionInterval from 9000ms to 500ms.
+	// The old default was 9000ms which lets other OSC apps steal /*S for up to 9s.
+	((_context, props): CompanionStaticUpgradeResult<WingConfig> => {
+		return {
+			updatedConfig: {
+				...props.config,
+				subscriptionInterval:
+					!props.config?.subscriptionInterval || props.config.subscriptionInterval >= 9000
+						? 500
+						: props.config.subscriptionInterval,
+			},
+			updatedActions: [],
+			updatedFeedbacks: [],
+		}
+	}) as CompanionStaticUpgradeScript<WingConfig>,
 ]

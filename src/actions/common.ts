@@ -31,6 +31,7 @@ import { getSourceGroupChoices } from '../choices/common.js'
 import { MuteGroupCommands } from '../commands/mutegroup.js'
 import { IoCommands } from '../commands/io.js'
 import { ConfigurationCommands } from '../commands/config.js'
+import { ChannelCommands } from '../commands/channel.js'
 
 export enum CommonActions {
 	// Setup
@@ -1513,6 +1514,8 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 				const idx = StateUtil.getNumberFromState(ActionUtil.getMainInputConnectionIndexCommand(sel), state)
 				if (!grp || idx === undefined) return
 				await send(IoCommands.InputGain(grp, Math.round(idx)), Math.max(-3, Math.min(45.5, gain)), true)
+				const num = ActionUtil.getNodeNumberFromID(sel)
+				self.connection?.sendCommand(ChannelCommands.InputGain(num)).catch(() => {})
 			},
 			subscribe: (event) => {
 				const sel = ActionUtil.getStringWithVariables(event, 'channel')
@@ -1550,6 +1553,8 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 				const newGain = Math.max(-3, Math.min(45.5, current + step))
 				await send(gainCmd, newGain, true)
 				state.set(gainCmd, [{ type: 'f', value: newGain }])
+				const num = ActionUtil.getNodeNumberFromID(sel)
+				self.connection?.sendCommand(ChannelCommands.InputGain(num)).catch(() => {})
 			},
 			subscribe: (event) => {
 				const sel = ActionUtil.getStringWithVariables(event, 'channel')

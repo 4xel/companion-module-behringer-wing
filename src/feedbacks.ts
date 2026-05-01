@@ -64,6 +64,7 @@ export enum FeedbackId {
 	GainCompManualActive = 'gain-comp-manual-active',
 	GainCompSnapshotExists = 'gain-comp-snapshot-exists',
 	ChannelNeedsComp = 'channel-needs-comp',
+	GainDisplay = 'ch-gain-display',
 }
 
 function subscribeFeedback(
@@ -921,6 +922,35 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 				const channel = ActionUtil.getStringWithVariables(event, 'channel')
 				const ch = ActionUtil.getNodeNumberFromID(channel)
 				return _self.gainCompHandler?.isChannelCompOk(ch) === false
+			},
+			subscribe: () => {},
+			unsubscribe: () => {},
+		},
+
+		[FeedbackId.GainDisplay]: {
+			type: 'boolean',
+			name: 'Gain Comp - Live Gain/Trim Display',
+			description:
+				'Overrides button text with live G:/T:/Δ values on every gain change. ' +
+				'More reliable than variables for rapid updates — driven by checkFeedbacks, ' +
+				'not variable batching. Use on the Gain Comp strip preset.',
+			defaultStyle: {},
+			options: [...GetDropdownWithVariables('Channel', 'channel', state.namedChoices.channels)],
+			callback: (event) => {
+				const channel = ActionUtil.getStringWithVariables(event, 'channel')
+				const ch = Number(ActionUtil.getNodeNumberFromID(channel))
+				const handler = _self.gainCompHandler
+				if (!handler) return false
+				const gain = handler['gainCache']?.get(ch)
+				const trim = handler['trimCache']?.get(ch)
+				const delta = handler.getCompDelta(ch)
+				const gainStr = gain !== undefined ? `${Math.round(gain * 10) / 10}` : '—'
+				const trimStr = trim !== undefined ? `${Math.round(trim * 10) / 10}` : '—'
+				const deltaStr = delta !== undefined ? `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}` : ''
+				const name = state.namedChoices.channels.find((c) => c.id === channel)?.label ?? `CH${ch}`
+				return {
+					text: `${name}\nG: ${gainStr}dB \nT: ${trimStr}dB\nΔ${deltaStr}dB`,
+				} as any
 			},
 			subscribe: () => {},
 			unsubscribe: () => {},

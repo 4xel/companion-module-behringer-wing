@@ -190,9 +190,9 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 		}
 
 		this.connection.open('0.0.0.0', 0, this.config.host!, 2223)
-		// Wing spec: renew every 1 second (expires after ~10s; 9s default is too close
-		// to the expiry and causes gaps when another subscriber briefly steals the slot)
-		this.connection.setSubscriptionInterval(this.config.subscriptionInterval ?? 1000)
+		// Renew every 500ms — Wing's /*S subscription is last-sender-wins with ~10s expiry.
+		// Other apps (Wing Remote, web interface) may compete; 500ms keeps us aggressive.
+		this.connection.setSubscriptionInterval(this.config.subscriptionInterval ?? 500)
 		this.connection.startSubscription()
 
 		this.connection?.on('ready', () => {
