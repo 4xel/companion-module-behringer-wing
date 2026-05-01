@@ -145,6 +145,9 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 	presets['comp-manual'] = getGainCompTogglePreset('manual')
 	for (let i = 1; i <= model.channels; i++) {
 		presets[`comp-ch${i}`] = getGainCompChannelPreset(i)
+		presets[`comp-ch${i}-strip`] = getGainCompChannelStripPreset(i)
+		presets[`comp-ch${i}-gain-knob`] = getGainCompGainKnobPreset(i)
+		presets[`comp-ch${i}-trim-knob`] = getGainCompTrimKnobPreset(i)
 	}
 
 	// USB player
@@ -563,6 +566,105 @@ function getGainCompChannelPreset(ch: number): CompanionButtonPresetDefinition {
 				feedbackId: FeedbackId.ChannelNeedsComp,
 				options: { channel: path },
 				style: { bgcolor: combineRgb(200, 120, 0), color: combineRgb(0, 0, 0) },
+			},
+		],
+	}
+}
+
+function getGainCompChannelStripPreset(ch: number): CompanionButtonPresetDefinition {
+	const path = `/ch/${ch}`
+	return {
+		name: `Gain Comp - CH${ch} Strip`,
+		category: 'Gain Compensation',
+		type: 'button',
+		style: {
+			// Full channel strip display matching the idea file layout:
+			// Name / G: gain / T: trim / Δ: delta
+			text: `$(wing:ch${ch}_name)\nG:$(wing:ch${ch}_gain)dB T:$(wing:ch${ch}_trim)dB\nΔ$(wing:ch${ch}_comp_delta)dB`,
+			size: 'auto',
+			color: combineRgb(220, 220, 220),
+			bgcolor: combineRgb(20, 20, 40),
+		},
+		steps: [
+			{
+				down: [{ actionId: CommonActions.CompensateChannel, options: { channel: path } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				// Amber when trim correction is pending (manual mode or out-of-sync)
+				feedbackId: FeedbackId.ChannelNeedsComp,
+				options: { channel: path },
+				style: { bgcolor: combineRgb(180, 100, 0), color: combineRgb(0, 0, 0) },
+			},
+			{
+				// Green when auto compensation is active
+				feedbackId: FeedbackId.GainCompActive,
+				options: {},
+				style: { bgcolor: combineRgb(0, 80, 20), color: combineRgb(200, 255, 200) },
+			},
+		],
+	}
+}
+
+function getGainCompGainKnobPreset(ch: number): CompanionButtonPresetDefinition {
+	const path = `/ch/${ch}`
+	return {
+		name: `Gain Comp - CH${ch} Gain Knob`,
+		category: 'Gain Compensation',
+		type: 'button',
+		style: {
+			text: `CH${ch}\nG:$(wing:ch${ch}_gain)dB`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(40, 20, 60),
+		},
+		options: { rotaryActions: true },
+		steps: [
+			{
+				down: [],
+				up: [],
+				rotate_left: [{ actionId: CommonActions.AdjustHeadampGain, options: { channel: path, step: -3 } }],
+				rotate_right: [{ actionId: CommonActions.AdjustHeadampGain, options: { channel: path, step: 3 } }],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.ChannelNeedsComp,
+				options: { channel: path },
+				style: { bgcolor: combineRgb(180, 100, 0), color: combineRgb(0, 0, 0) },
+			},
+		],
+	}
+}
+
+function getGainCompTrimKnobPreset(ch: number): CompanionButtonPresetDefinition {
+	const path = `/ch/${ch}`
+	return {
+		name: `Gain Comp - CH${ch} Trim Knob`,
+		category: 'Gain Compensation',
+		type: 'button',
+		style: {
+			text: `CH${ch}\nT:$(wing:ch${ch}_trim)dB`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(20, 50, 60),
+		},
+		options: { rotaryActions: true },
+		steps: [
+			{
+				down: [{ actionId: CommonActions.ResetTrim, options: { sel: path } }],
+				up: [],
+				rotate_left: [{ actionId: CommonActions.AdjustTrim, options: { sel: path, step: -0.5 } }],
+				rotate_right: [{ actionId: CommonActions.AdjustTrim, options: { sel: path, step: 0.5 } }],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.ChannelNeedsComp,
+				options: { channel: path },
+				style: { bgcolor: combineRgb(180, 100, 0), color: combineRgb(0, 0, 0) },
 			},
 		],
 	}
@@ -1558,7 +1660,7 @@ function getBatchResetPreset(base: string, num: number): CompanionButtonPresetDe
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(100, 0, 0),
 		},
-		steps: [{ down: [{ actionId: CommonActions.BatchResetChannel, options: { sel: path } }], up: [] }],
+		steps: [{ down: [{ actionId: CommonActions.ResetChannel, options: { sel: path } }], up: [] }],
 		feedbacks: [],
 	}
 }
