@@ -49,6 +49,12 @@ export class GainCompensationHandler extends EventEmitter {
 	private gainCache = new Map<number, number>()
 	private trimCache = new Map<number, number>()
 
+	// After writing trim we ignore incoming trim echoes for a short cooldown.
+	// Without this, a delayed echo from a prior query can overwrite trimCache
+	// with a stale value — making isChannelCompOk fail until the next gain push.
+	private trimCooldown = new Set<number>()
+	private trimCooldownTimers = new Map<number, NodeJS.Timeout>()
+
 	private snapshotTakenAt?: Date
 	private snapshotTimer?: NodeJS.Timeout
 
@@ -95,9 +101,12 @@ export class GainCompensationHandler extends EventEmitter {
 				const trim = extractValue(args)
 				if (trim === null) continue
 
-				// Wing does not push /*S updates for trim values we set via OSC, so there
-				// are no stale pushes to guard against. Accept every incoming trim message
-				// unconditionally — these are all query responses (echo from sendCommand).
+				// Ignore trim messages during the post-write cooldown window.
+				// sendCommand sends SET then immediately QUERY; if UDP reorders them
+				// or Wing is slow, the echo can return the OLD trim value and overwrite
+				// our locally-set trimCache, causing isChannelCompOk to flicker false.
+				if (this.trimCooldown.has(ch)) continue
+
 				this.trimCache.set(ch, trim)
 				this.emitChannelVariables(ch)
 				if (this.refs.has(ch)) this.emit('check-feedbacks', ['channel-needs-comp'])
@@ -176,6 +185,9 @@ export class GainCompensationHandler extends EventEmitter {
 	destroy(): void {
 		this.stopSweep()
 		if (this.snapshotTimer) clearTimeout(this.snapshotTimer)
+		for (const t of this.trimCooldownTimers.values()) clearTimeout(t)
+		this.trimCooldownTimers.clear()
+		this.trimCooldown.clear()
 	}
 
 	// ─── Internal ─────────────────────────────────────────────────────────────
@@ -208,8 +220,18 @@ export class GainCompensationHandler extends EventEmitter {
 
 		const newTrim = Math.max(TRIM_MIN, Math.min(TRIM_MAX, ref.trim - delta))
 
-		// Update local cache immediately (Wing won't echo set commands via /*S)
+		// Update local cache immediately and block echo overwrites for 300ms
 		this.trimCache.set(ch, newTrim)
+		const existing = this.trimCooldownTimers.get(ch)
+		if (existing) clearTimeout(existing)
+		this.trimCooldown.add(ch)
+		this.trimCooldownTimers.set(
+			ch,
+			setTimeout(() => {
+				this.trimCooldown.delete(ch)
+				this.trimCooldownTimers.delete(ch)
+			}, 300),
+		)
 		this.emit('send', ChannelCommands.InputTrim(ch), newTrim)
 		this.logger?.debug(`GainComp: ch${ch} Δgain=${delta.toFixed(2)}dB → trim=${newTrim.toFixed(2)}dB`)
 		this.emitChannelVariables(ch)
