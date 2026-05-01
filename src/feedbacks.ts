@@ -1047,7 +1047,10 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 				const sel = ActionUtil.getStringWithVariables(event, 'sel')
 				const st = _self.stateHandler?.state
 				if (!st) return {}
-				const idx = Math.round(getActualFromState(`${sel}/$col`, st) ?? getActualFromState(`${sel}/col`, st) ?? 0)
+				const valDollar = getActualFromState(`${sel}/$col`, st)
+				const valCol = getActualFromState(`${sel}/col`, st)
+				// Wing sends 0-based colour indices; documentation labels them 1-18
+				const idx = Math.round(valDollar ?? valCol ?? -1) + 1
 				return { bgcolor: WING_STRIP_COLOURS[idx] ?? combineRgb(40, 40, 40) }
 			},
 			subscribe: (event: CompanionFeedbackInfo) => {
