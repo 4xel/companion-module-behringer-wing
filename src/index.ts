@@ -126,11 +126,14 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 	private startWlivePoller(): void {
 		this.stopWlivePoller()
 		this.wlivePoller = setInterval(() => {
-			// Poll the string-typed state path. Wing's /*S push sends an integer
-			// enum index for this param, which getStringFromState can't read.
-			// Polling the full response keeps the string representation fresh.
+			// Poll the string-typed state path using fire-and-forget sendCommand instead
+			// of ensureLoaded. ensureLoaded puts requests into the stateHandler queue with
+			// a timeout; if WLive cards are not present Wing never responds, every request
+			// times out, and orphaned promises accumulate — eventually clogging the queue
+			// that gain/trim ensureLoaded calls also use. sendCommand is fire-and-forget:
+			// the response is processed normally when it arrives, with no queue or timeout.
 			for (let card = 1; card <= 2; card++) {
-				this.stateHandler?.ensureLoaded(CardsCommands.WLiveCardState(card))
+				this.connection?.sendCommand(CardsCommands.WLiveCardState(card)).catch(() => {})
 			}
 		}, 1000)
 	}
