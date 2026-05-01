@@ -36,6 +36,7 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`ch${i}-reset`] = getChannelResetPreset('ch', i)
 		presets[`ch${i}-batch-kill-sends`] = getBatchKillSendsPreset('ch', i)
 		presets[`ch${i}-fader-display`] = getFaderDisplayPreset('ch', i)
+		presets[`ch${i}-colour-mute`] = getColourMutePreset('ch', i)
 	}
 
 	for (let i = 1; i <= model.busses; i++) {
@@ -65,6 +66,7 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`bus${i}-nominal`] = getFaderPreset('bus', i, 0, 'Nominal')
 		presets[`bus${i}-cut`] = getFaderPreset('bus', i, -144, 'Cut')
 		presets[`bus${i}-fader-display`] = getFaderDisplayPreset('bus', i)
+		presets[`bus${i}-colour-mute`] = getColourMutePreset('bus', i)
 	}
 
 	for (let i = 1; i <= model.matrices; i++) {
@@ -299,6 +301,36 @@ function getChannelAltSourcePreset(base: string, num: number): CompanionButtonPr
 				feedbackId: FeedbackId.ChannelAltSource,
 				options: { sel: path },
 				style: { bgcolor: combineRgb(200, 80, 0), color: combineRgb(255, 255, 255) },
+			},
+		],
+	}
+}
+
+function getColourMutePreset(base: string, num: number): CompanionButtonPresetDefinition {
+	const path = `/${base}/${num}`
+	const varName = `${base}${num}_name`
+	return {
+		name: `${base.toUpperCase()}${num} Colour Mute`,
+		category: 'Channel Strip',
+		type: 'button',
+		style: {
+			text: `$(wing:${varName})`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(40, 40, 40),
+		},
+		steps: [{ down: [{ actionId: CommonActions.SetMute, options: { sel: path, mute: -1 } }], up: [] }],
+		feedbacks: [
+			// Background follows the Wing desk strip colour
+			{
+				feedbackId: FeedbackId.StripColour,
+				options: { sel: path, sel_use_variables: false },
+			},
+			// Red overlay with dark text when muted
+			{
+				feedbackId: FeedbackId.Mute,
+				options: { sel: path, mute: 1 },
+				style: { color: combineRgb(255, 200, 200), bgcolor: combineRgb(180, 0, 0) },
 			},
 		],
 	}

@@ -66,6 +66,7 @@ export enum FeedbackId {
 	ChannelNeedsComp = 'channel-needs-comp',
 	GainDisplay = 'ch-gain-display',
 	FaderDisplay = 'fader-display',
+	StripColour = 'strip-colour',
 }
 
 function subscribeFeedback(
@@ -1004,7 +1005,61 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 			},
 			unsubscribe: () => {},
 		},
+
+		[FeedbackId.StripColour]: {
+			type: 'boolean',
+			name: 'Strip - Colour Sync',
+			description:
+				'Sets the button background colour to match the strip colour on the Wing desk. ' +
+				'Add to any button to keep it visually in sync with the desk layout.',
+			defaultStyle: {},
+			options: [
+				...GetDropdownWithVariables('Strip', 'sel', [
+					...state.namedChoices.channels,
+					...state.namedChoices.auxes,
+					...state.namedChoices.busses,
+					...state.namedChoices.matrices,
+					...state.namedChoices.mains,
+					...state.namedChoices.dcas,
+				]),
+			],
+			callback: (event: CompanionFeedbackInfo) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				const raw = _self.stateHandler?.state?.get(`${sel}/$col`) ?? _self.stateHandler?.state?.get(`${sel}/col`)
+				const idx = typeof raw === 'number' ? Math.round(raw) : 0
+				return { bgcolor: WING_STRIP_COLOURS[idx] ?? combineRgb(40, 40, 40) } as any
+			},
+			subscribe: (event: CompanionFeedbackInfo) => {
+				const sel = ActionUtil.getStringWithVariables(event, 'sel')
+				ensureLoaded(`${sel}/$col`)
+			},
+			unsubscribe: () => {},
+		},
 	}
 
 	return feedbacks
+}
+
+// Wing strip colour palette — index matches the /col integer (1-18).
+// Index 0 = unset/default (dark grey).
+const WING_STRIP_COLOURS: Record<number, number> = {
+	0: combineRgb(40, 40, 40),
+	1: combineRgb(93, 104, 135), // Gray Blue
+	2: combineRgb(48, 112, 226), // Medium Blue
+	3: combineRgb(20, 47, 170), // Dark Blue
+	4: combineRgb(0, 175, 175), // Turquoise
+	5: combineRgb(0, 177, 67), // Green
+	6: combineRgb(115, 140, 35), // Olive Green
+	7: combineRgb(230, 210, 0), // Yellow
+	8: combineRgb(155, 90, 30), // Brown
+	9: combineRgb(220, 35, 35), // Red
+	10: combineRgb(225, 110, 80), // Coral
+	11: combineRgb(210, 45, 165), // Magenta
+	12: combineRgb(130, 35, 170), // Purple
+	13: combineRgb(225, 120, 0), // Orange
+	14: combineRgb(100, 165, 235), // Light Blue
+	15: combineRgb(225, 145, 125), // Salmon
+	16: combineRgb(0, 145, 145), // Teal
+	17: combineRgb(65, 65, 65), // Dark Gray
+	18: combineRgb(160, 160, 160), // Light Gray
 }
