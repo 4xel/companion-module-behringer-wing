@@ -8,6 +8,7 @@ import { ConfigActions } from './actions/config.js'
 import { FxActionId } from './actions/fx.js'
 import { EffectCommands } from './commands/effect.js'
 import { CardsActionId } from './actions/cards.js'
+import { UsbPlayerActionId } from './actions/usbplayer.js'
 
 export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPresetDefinitions {
 	const model = _instance.model
@@ -142,6 +143,44 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 	presets['comp-manual'] = getGainCompTogglePreset('manual')
 	for (let i = 1; i <= model.channels; i++) {
 		presets[`comp-ch${i}`] = getGainCompChannelPreset(i)
+	}
+
+	// USB player
+	presets['usb-play'] = getUsbTransportPreset('PLAY', '▶ PLAY', FeedbackId.PlayerState, 'PLAY', combineRgb(0, 160, 0))
+	presets['usb-stop'] = getUsbTransportPreset('STOP', '⏹ STOP', FeedbackId.PlayerState, 'STOP', combineRgb(60, 60, 60))
+	presets['usb-pause'] = getUsbTransportPreset(
+		'PAUSE',
+		'⏸ PAUSE',
+		FeedbackId.PlayerState,
+		'PAUSE',
+		combineRgb(160, 130, 0),
+	)
+	presets['usb-next'] = getUsbTransportPreset('NEXT', '⏭ NEXT', null, null, combineRgb(0, 60, 120))
+	presets['usb-prev'] = getUsbTransportPreset('PREV', '⏮ PREV', null, null, combineRgb(0, 60, 120))
+	presets['usb-track-display'] = getUsbTrackDisplayPreset()
+
+	// USB recorder
+	presets['usb-rec'] = getUsbRecordPreset('REC', '⏺ REC', FeedbackId.RecorderState, 'REC', combineRgb(200, 0, 0))
+	presets['usb-rec-stop'] = getUsbRecordPreset(
+		'STOP',
+		'⏹ STOP',
+		FeedbackId.RecorderState,
+		'STOP',
+		combineRgb(60, 60, 60),
+	)
+	presets['usb-rec-pause'] = getUsbRecordPreset(
+		'PAUSE',
+		'⏸ PAUSE',
+		FeedbackId.RecorderState,
+		'PAUSE',
+		combineRgb(160, 130, 0),
+	)
+	presets['usb-rec-newfile'] = getUsbRecordPreset('NEWFILE', '+ FILE', null, null, combineRgb(0, 60, 80))
+	presets['usb-rec-status'] = getUsbRecStatusPreset()
+
+	// Headamp gain presets (ch 1-8 as representative set)
+	for (let i = 1; i <= Math.min(model.channels, 8); i++) {
+		presets[`ch${i}-headamp-gain`] = getHeadampGainPreset(i)
 	}
 
 	presets[`lights-bright`] = getLightPresetBright()
@@ -555,6 +594,144 @@ function getLightPresetBright(): CompanionButtonPresetDefinition {
 					},
 				],
 				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+}
+
+// ─── USB presets ──────────────────────────────────────────────────────────────
+
+function getUsbTransportPreset(
+	action: string,
+	label: string,
+	feedbackId: FeedbackId | null,
+	feedbackState: string | null,
+	activeColor: number,
+): CompanionButtonPresetDefinition {
+	return {
+		name: `USB Player: ${label}`,
+		category: 'USB Player',
+		type: 'button',
+		style: { text: label, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+		steps: [
+			{
+				down: [{ actionId: UsbPlayerActionId.PlaybackAction, options: { action } }],
+				up: [],
+			},
+		],
+		feedbacks:
+			feedbackId && feedbackState
+				? [
+						{
+							feedbackId,
+							options: { state: feedbackState },
+							style: { bgcolor: activeColor, color: combineRgb(255, 255, 255) },
+						},
+					]
+				: [],
+	}
+}
+
+function getUsbTrackDisplayPreset(): CompanionButtonPresetDefinition {
+	return {
+		name: 'USB Player: Track Display',
+		category: 'USB Player',
+		type: 'button',
+		style: {
+			text: '$(wing:play_song)\n$(wing:play_pos_mm_ss) / $(wing:play_length_mm_ss)',
+			size: 'auto',
+			color: combineRgb(200, 200, 200),
+			bgcolor: combineRgb(20, 20, 40),
+		},
+		steps: [{ down: [], up: [] }],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.PlayerState,
+				options: { state: 'PLAY' },
+				style: { bgcolor: combineRgb(0, 60, 20) },
+			},
+		],
+	}
+}
+
+function getUsbRecordPreset(
+	action: string,
+	label: string,
+	feedbackId: FeedbackId | null,
+	feedbackState: string | null,
+	activeColor: number,
+): CompanionButtonPresetDefinition {
+	return {
+		name: `USB Recorder: ${label}`,
+		category: 'USB Recorder',
+		type: 'button',
+		style: { text: label, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
+		steps: [
+			{
+				down: [{ actionId: UsbPlayerActionId.RecordAction, options: { action } }],
+				up: [],
+			},
+		],
+		feedbacks:
+			feedbackId && feedbackState
+				? [
+						{
+							feedbackId,
+							options: { state: feedbackState },
+							style: { bgcolor: activeColor, color: combineRgb(255, 255, 255) },
+						},
+					]
+				: [],
+	}
+}
+
+function getUsbRecStatusPreset(): CompanionButtonPresetDefinition {
+	return {
+		name: 'USB Recorder: Status',
+		category: 'USB Recorder',
+		type: 'button',
+		style: {
+			text: '$(wing:rec_state)\n$(wing:rec_elapsed_mm_ss)',
+			size: 'auto',
+			color: combineRgb(200, 200, 200),
+			bgcolor: combineRgb(40, 20, 20),
+		},
+		steps: [{ down: [], up: [] }],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.RecorderState,
+				options: { state: 'REC' },
+				style: { bgcolor: combineRgb(160, 0, 0), color: combineRgb(255, 200, 200) },
+			},
+			{
+				feedbackId: FeedbackId.RecorderState,
+				options: { state: 'PAUSE' },
+				style: { bgcolor: combineRgb(140, 100, 0), color: combineRgb(255, 255, 200) },
+			},
+		],
+	}
+}
+
+function getHeadampGainPreset(ch: number): CompanionButtonPresetDefinition {
+	const path = `/ch/${ch}`
+	return {
+		name: `CH${ch} Headamp Gain`,
+		category: 'Input Processing',
+		type: 'button',
+		style: {
+			text: `CH${ch}\n$(wing:ch${ch}_gain)dB`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(40, 20, 60),
+		},
+		options: { rotaryActions: true },
+		steps: [
+			{
+				down: [],
+				up: [],
+				rotate_left: [{ actionId: CommonActions.AdjustHeadampGain, options: { channel: path, step: -3 } }],
+				rotate_right: [{ actionId: CommonActions.AdjustHeadampGain, options: { channel: path, step: 3 } }],
 			},
 		],
 		feedbacks: [],
