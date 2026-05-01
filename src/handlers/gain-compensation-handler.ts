@@ -5,43 +5,75 @@ import { ModelSpec } from '../models/types.js'
 import { ModuleLogger } from './logger.js'
 import { ChannelCommands } from '../commands/channel.js'
 
-// OSC path regexes for channel gain mirror and trim
 const RE_GAIN = /^\/ch\/(\d+)\/in\/set\/\$g$/
 const RE_TRIM = /^\/ch\/(\d+)\/in\/set\/trim$/
 
+// Wing LCL/AES50 preamp: normalized 0..1 maps to -3..45.5 dB (98 steps)
+const GAIN_NORM_MIN = -3
+const GAIN_NORM_RANGE = 48.5
+
+// Trim: normalized 0..1 maps to -18..18 dB
+const TRIM_NORM_MIN = -18
+const TRIM_NORM_RANGE = 36
+
 const TRIM_MIN = -18
 const TRIM_MAX = 18
-const TRIM_TOLERANCE = 0.05 // dB — within this = "ok"
-const COMP_DEBOUNCE_MS = 200 // debounce per channel before applying compensation
-const COMP_GUARD_MS = 500 // ignore stale /*S pushes for this long after writing trim
-const SWEEP_MS = 5000 // fallback reconciliation interval
+const TRIM_TOLERANCE = 0.05
+const COMP_DEBOUNCE_MS = 300
+const COMP_GUARD_MS = 600
+const SWEEP_MS = 5000
 
 interface ChannelRef {
-	gain: number // actual dB captured at snapshot time
-	trim: number // actual dB captured at snapshot time
+	gain: number // actual dB
+	trim: number // actual dB
+}
+
+/**
+ * Convert any Wing OSC arg to actual dB for /ch/N/in/set/$g.
+ * Wing sends either:
+ *   - `,sff "5.5" 0.42 5.5`  (display string + normalized + actual) — full query response
+ *   - `,f 0.42`               (normalized 0..1 only) — /*S push or minimal response
+ * Accept both; convert normalized values using the known preamp range.
+ */
+function toGainDb(arg: osc.MetaArgument): number | undefined {
+	if (!arg) return undefined
+	if (arg.type === 's') {
+		const v = parseFloat(arg.value)
+		return isNaN(v) ? undefined : v
+	}
+	const raw = arg.value as number
+	if (typeof raw !== 'number' || isNaN(raw)) return undefined
+	// Normalized values are in [0, 1]; actual dB for LCL/AES50 preamps is −3..45.5.
+	// Values outside [0, 1] are already in actual dB.
+	if (raw >= 0 && raw <= 1) return raw * GAIN_NORM_RANGE + GAIN_NORM_MIN
+	return raw
+}
+
+function toTrimDb(arg: osc.MetaArgument): number | undefined {
+	if (!arg) return undefined
+	if (arg.type === 's') {
+		const v = parseFloat(arg.value)
+		return isNaN(v) ? undefined : v
+	}
+	const raw = arg.value as number
+	if (typeof raw !== 'number' || isNaN(raw)) return undefined
+	// Trim range is −18..18 dB normalized to 0..1.
+	// If value is outside [0, 1], it's already actual dB.
+	if (raw >= 0 && raw <= 1) return raw * TRIM_NORM_RANGE + TRIM_NORM_MIN
+	return raw
 }
 
 export class GainCompensationHandler extends EventEmitter {
 	private enabled = false
 	private mode: 'auto' | 'manual' = 'auto'
 	private refs = new Map<number, ChannelRef>()
-
-	// Actual-dB cache — only populated from full query responses (args[0].type === 's')
-	// Never overwritten by /*S pushes (which carry normalized 0..1 floats)
 	private gainCache = new Map<number, number>()
 	private trimCache = new Map<number, number>()
-
 	private snapshotTakenAt?: Date
 	private snapshotTimer?: NodeJS.Timeout
-
-	// Guard: channels where we just wrote trim — ignore stale /*S pushes
 	private pendingSet = new Set<number>()
 	private pendingSetTimers = new Map<number, NodeJS.Timeout>()
-
-	// Debounce per channel for reactive auto-compensation
 	private compDebounce = new Map<number, NodeJS.Timeout>()
-
-	// Fallback reconciliation sweep
 	private sweepTimer?: NodeJS.Timeout
 
 	constructor(
@@ -60,18 +92,12 @@ export class GainCompensationHandler extends EventEmitter {
 			const gainMatch = msg.address.match(RE_GAIN)
 			if (gainMatch) {
 				const ch = parseInt(gainMatch[1])
-				if (args[0]?.type === 's') {
-					// Full query response — args[0] is display string, parse to actual dB
-					const db = parseFloat(args[0].value)
-					if (!isNaN(db)) {
-						this.gainCache.set(ch, db)
-						this.emitChannelVariables(ch)
-					}
-				} else {
-					// /*S push (normalized float) — react immediately if auto-comp is armed
+				const db = toGainDb(args[0])
+				if (db !== undefined) {
+					this.gainCache.set(ch, db)
+					this.emitChannelVariables(ch)
+					// If auto comp is armed, schedule correction using the fresh value
 					if (this.enabled && this.mode === 'auto' && this.refs.has(ch) && !this.pendingSet.has(ch)) {
-						// Request fresh actual-dB value, then apply after debounce
-						this.emit('ensure-loaded', ChannelCommands.InputGain(ch))
 						this.scheduleAutoComp(ch)
 					}
 				}
@@ -81,38 +107,33 @@ export class GainCompensationHandler extends EventEmitter {
 			const trimMatch = msg.address.match(RE_TRIM)
 			if (trimMatch) {
 				const ch = parseInt(trimMatch[1])
-				if (args[0]?.type === 's') {
-					const db = parseFloat(args[0].value)
-					if (!isNaN(db)) {
-						this.trimCache.set(ch, db)
-						this.emitChannelVariables(ch)
-					}
+				const db = toTrimDb(args[0])
+				if (db !== undefined) {
+					this.trimCache.set(ch, db)
+					this.emitChannelVariables(ch)
 				}
 			}
 		}
 	}
 
-	// ─── Public API (called by actions) ──────────────────────────────────────
+	// ─── Public API ───────────────────────────────────────────────────────────
 
 	takeSnapshot(): void {
 		if (this.snapshotTimer) clearTimeout(this.snapshotTimer)
-		// Request fresh values for all channels — responses update the caches via processMessage
+		// Request fresh values; responses will feed processMessage → gainCache/trimCache
 		for (let ch = 1; ch <= this.model.channels; ch++) {
 			this.emit('ensure-loaded', ChannelCommands.InputGain(ch))
 			this.emit('ensure-loaded', ChannelCommands.InputTrim(ch))
 		}
-		// Capture refs after responses have had time to arrive
-		this.snapshotTimer = setTimeout(() => this.captureRefs(), 2000)
+		// Give the Wing time to respond — with concurrency 100 this is well within 1 s
+		this.snapshotTimer = setTimeout(() => this.captureRefs(), 1500)
 	}
 
 	enable(mode: 'auto' | 'manual'): void {
 		this.enabled = true
 		this.mode = mode
-		if (mode === 'auto') {
-			this.startSweep()
-		} else {
-			this.stopSweep()
-		}
+		if (mode === 'auto') this.startSweep()
+		else this.stopSweep()
 		this.emitGlobalVariables()
 		this.emit('check-feedbacks', ['gain-comp-active', 'gain-comp-manual-active'])
 	}
@@ -127,13 +148,10 @@ export class GainCompensationHandler extends EventEmitter {
 
 	compensateChannel(ch: number): void {
 		if (!this.refs.has(ch)) return
-		// Get fresh values then apply
 		this.emit('ensure-loaded', ChannelCommands.InputGain(ch))
 		this.emit('ensure-loaded', ChannelCommands.InputTrim(ch))
-		setTimeout(() => this.applyCompensationForChannel(ch), 300)
+		setTimeout(() => this.applyCompensationForChannel(ch), 400)
 	}
-
-	// ─── State accessors (used by feedbacks) ─────────────────────────────────
 
 	isEnabled(): boolean {
 		return this.enabled
@@ -158,9 +176,8 @@ export class GainCompensationHandler extends EventEmitter {
 	getCompDelta(ch: number): number | undefined {
 		const ref = this.refs.get(ch)
 		if (!ref) return undefined
-		const currentGain = this.gainCache.get(ch)
-		if (currentGain === undefined) return undefined
-		return currentGain - ref.gain
+		const g = this.gainCache.get(ch)
+		return g !== undefined ? g - ref.gain : undefined
 	}
 
 	destroy(): void {
@@ -182,7 +199,7 @@ export class GainCompensationHandler extends EventEmitter {
 			}
 		}
 		this.snapshotTakenAt = new Date()
-		this.logger?.info(`GainComp: snapshot captured for ${count}/${this.model.channels} channels`)
+		this.logger?.info(`GainComp: snapshot captured ${count}/${this.model.channels} channels`)
 		this.emitGlobalVariables()
 		this.emit('check-feedbacks', ['gain-comp-snapshot-exists'])
 	}
@@ -204,13 +221,12 @@ export class GainCompensationHandler extends EventEmitter {
 		if (!ref) return
 		const currentGain = this.gainCache.get(ch)
 		if (currentGain === undefined) {
-			this.logger?.warn(`GainComp: no gain in cache for ch${ch}, skipping`)
+			this.logger?.warn(`GainComp: no gain cached for ch${ch}, skipping`)
 			return
 		}
 		const delta = currentGain - ref.gain
-		if (Math.abs(delta) < 0.01) return // no meaningful change
+		if (Math.abs(delta) < 0.01) return
 		const newTrim = Math.max(TRIM_MIN, Math.min(TRIM_MAX, ref.trim - delta))
-
 		this.setPendingSet(ch)
 		this.trimCache.set(ch, newTrim)
 		this.emit('send', ChannelCommands.InputTrim(ch), newTrim)
@@ -232,7 +248,6 @@ export class GainCompensationHandler extends EventEmitter {
 		)
 	}
 
-	// Fallback sweep: reconcile any drift that reactive updates missed (e.g. lost packets)
 	private startSweep(): void {
 		this.stopSweep()
 		this.sweepTimer = setInterval(() => {
@@ -271,9 +286,7 @@ export class GainCompensationHandler extends EventEmitter {
 			comp_mode: this.mode,
 			comp_snapshot_time: this.snapshotTakenAt?.toLocaleTimeString() ?? '',
 		}
-		for (let ch = 1; ch <= this.model.channels; ch++) {
-			this.addChannelVars(ch, vars)
-		}
+		for (let ch = 1; ch <= this.model.channels; ch++) this.addChannelVars(ch, vars)
 		this.emit('update-variables', vars)
 	}
 
