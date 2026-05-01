@@ -110,6 +110,12 @@ export enum CommonActions {
 
 	// Reset
 	ResetChannel = 'reset-channel',
+
+	// Gain compensation
+	TakeGainSnapshot = 'take-gain-snapshot',
+	EnableGainComp = 'enable-gain-comp',
+	DisableGainComp = 'disable-gain-comp',
+	CompensateChannel = 'compensate-channel',
 }
 
 export function createCommonActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
@@ -1400,6 +1406,56 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 					await send(widthCmd, 0)
 					state.set(widthCmd, [{ type: 'f', value: 0 }])
 				}
+			},
+		},
+
+		////////////////////////////////////////////////////////////////
+		// Gain compensation
+		////////////////////////////////////////////////////////////////
+
+		[CommonActions.TakeGainSnapshot]: {
+			name: 'Gain Comp - Take Snapshot',
+			description: 'Capture current gain and trim for all channels as the compensation reference.',
+			options: [],
+			callback: async () => {
+				self.gainCompHandler?.takeSnapshot()
+			},
+		},
+
+		[CommonActions.EnableGainComp]: {
+			name: 'Gain Comp - Enable',
+			description:
+				'Enable gain compensation. Auto mode applies trim corrections immediately when gain changes. Manual mode waits for explicit per-channel compensate actions.',
+			options: [
+				...GetDropdownWithVariables('Mode', 'mode', [
+					{ id: 'auto', label: 'Auto (reactive)' },
+					{ id: 'manual', label: 'Manual (on demand)' },
+				]),
+			],
+			callback: async (event) => {
+				const mode = ActionUtil.getStringWithVariables(event, 'mode') as 'auto' | 'manual'
+				self.gainCompHandler?.enable(mode)
+			},
+		},
+
+		[CommonActions.DisableGainComp]: {
+			name: 'Gain Comp - Disable',
+			description: 'Disable gain compensation.',
+			options: [],
+			callback: async () => {
+				self.gainCompHandler?.disable()
+			},
+		},
+
+		[CommonActions.CompensateChannel]: {
+			name: 'Gain Comp - Compensate Channel',
+			description:
+				'Apply gain compensation to a single channel (manual mode). Reads current gain and sets trim to preserve post-preamp level.',
+			options: [...GetDropdownWithVariables('Channel', 'channel', state.namedChoices.channels)],
+			callback: async (event) => {
+				const channel = ActionUtil.getStringWithVariables(event, 'channel')
+				const ch = ActionUtil.getNodeNumberFromID(channel)
+				self.gainCompHandler?.compensateChannel(ch)
 			},
 		},
 	}

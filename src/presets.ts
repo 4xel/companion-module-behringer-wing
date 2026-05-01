@@ -131,6 +131,14 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`wlive-${card}-open-session`] = getWLiveOpenSessionPreset(card)
 	}
 
+	// Gain compensation
+	presets['comp-snapshot'] = getGainCompSnapshotPreset()
+	presets['comp-auto'] = getGainCompTogglePreset('auto')
+	presets['comp-manual'] = getGainCompTogglePreset('manual')
+	for (let i = 1; i <= model.channels; i++) {
+		presets[`comp-ch${i}`] = getGainCompChannelPreset(i)
+	}
+
 	presets[`lights-bright`] = getLightPresetBright()
 	presets[`lights-dark`] = getLightPresetDark()
 
@@ -321,6 +329,98 @@ function getTalkbackPreset(talkback: 'A' | 'B'): CompanionButtonPresetDefinition
 					color: combineRgb(255, 255, 255),
 					bgcolor: combineRgb(255, 0, 0),
 				},
+			},
+		],
+	}
+}
+
+// ─── Gain compensation presets ────────────────────────────────────────────────
+
+function getGainCompSnapshotPreset(): CompanionButtonPresetDefinition {
+	return {
+		name: 'Gain Comp - Snapshot',
+		category: 'Gain Compensation',
+		type: 'button',
+		style: {
+			text: 'SNAP\n$(wing:comp_snapshot_time)',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(0, 60, 120),
+		},
+		steps: [
+			{
+				down: [{ actionId: CommonActions.TakeGainSnapshot, options: {} }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.GainCompSnapshotExists,
+				options: {},
+				style: { bgcolor: combineRgb(0, 100, 200) },
+			},
+		],
+	}
+}
+
+function getGainCompTogglePreset(mode: 'auto' | 'manual'): CompanionButtonPresetDefinition {
+	const label = mode === 'auto' ? 'COMP\nAUTO' : 'COMP\nMANUAL'
+	const activeBg = mode === 'auto' ? combineRgb(0, 180, 0) : combineRgb(200, 120, 0)
+	const activeFeedback = mode === 'auto' ? FeedbackId.GainCompActive : FeedbackId.GainCompManualActive
+	return {
+		name: `Gain Comp - ${mode === 'auto' ? 'Auto' : 'Manual'} Toggle`,
+		category: 'Gain Compensation',
+		type: 'button',
+		style: {
+			text: label,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(40, 40, 40),
+		},
+		options: { stepAutoProgress: true },
+		steps: [
+			{
+				down: [{ actionId: CommonActions.EnableGainComp, options: { mode } }],
+				up: [],
+			},
+			{
+				down: [{ actionId: CommonActions.DisableGainComp, options: {} }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: activeFeedback,
+				options: {},
+				style: { bgcolor: activeBg, color: combineRgb(0, 0, 0) },
+			},
+		],
+	}
+}
+
+function getGainCompChannelPreset(ch: number): CompanionButtonPresetDefinition {
+	const path = `/ch/${ch}`
+	return {
+		name: `Gain Comp - CH${ch}`,
+		category: 'Gain Compensation',
+		type: 'button',
+		style: {
+			text: `CH${ch}\n$(wing:ch${ch}_name)\nΔ$(wing:ch${ch}_comp_delta)dB`,
+			size: 'auto',
+			color: combineRgb(200, 200, 200),
+			bgcolor: combineRgb(20, 20, 40),
+		},
+		steps: [
+			{
+				down: [{ actionId: CommonActions.CompensateChannel, options: { channel: path } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.ChannelNeedsComp,
+				options: { channel: path },
+				style: { bgcolor: combineRgb(200, 120, 0), color: combineRgb(0, 0, 0) },
 			},
 		],
 	}

@@ -59,6 +59,10 @@ export enum FeedbackId {
 	PhaseInvert = 'phase-invert',
 	SendMode = 'send-mode',
 	PhantomPower = 'phantom-power',
+	GainCompActive = 'gain-comp-active',
+	GainCompManualActive = 'gain-comp-manual-active',
+	GainCompSnapshotExists = 'gain-comp-snapshot-exists',
+	ChannelNeedsComp = 'channel-needs-comp',
 }
 
 function subscribeFeedback(
@@ -828,6 +832,60 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 				const cmd = ActionUtil.getPhantomPowerCommand(sel)
 				if (cmd) unsubscribeFeedback(subs, cmd, event)
 			},
+		},
+
+		[FeedbackId.GainCompActive]: {
+			type: 'boolean',
+			name: 'Gain Comp - Auto Active',
+			description: 'Active when gain compensation is enabled in auto mode.',
+			defaultStyle: { color: combineRgb(0, 0, 0), bgcolor: combineRgb(0, 200, 0) },
+			options: [],
+			callback: () => {
+				return _self.gainCompHandler?.isEnabled() === true && _self.gainCompHandler?.getMode() === 'auto'
+			},
+			subscribe: () => {},
+			unsubscribe: () => {},
+		},
+
+		[FeedbackId.GainCompManualActive]: {
+			type: 'boolean',
+			name: 'Gain Comp - Manual Active',
+			description: 'Active when gain compensation is enabled in manual mode.',
+			defaultStyle: { color: combineRgb(0, 0, 0), bgcolor: combineRgb(220, 140, 0) },
+			options: [],
+			callback: () => {
+				return _self.gainCompHandler?.isEnabled() === true && _self.gainCompHandler?.getMode() === 'manual'
+			},
+			subscribe: () => {},
+			unsubscribe: () => {},
+		},
+
+		[FeedbackId.GainCompSnapshotExists]: {
+			type: 'boolean',
+			name: 'Gain Comp - Snapshot Exists',
+			description: 'Active when a gain compensation snapshot has been taken.',
+			defaultStyle: { color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 80, 160) },
+			options: [],
+			callback: () => {
+				return _self.gainCompHandler?.hasSnapshot() === true
+			},
+			subscribe: () => {},
+			unsubscribe: () => {},
+		},
+
+		[FeedbackId.ChannelNeedsComp]: {
+			type: 'boolean',
+			name: 'Gain Comp - Channel Needs Compensation',
+			description: 'Active when a channel trim is out of sync with the compensation reference.',
+			defaultStyle: { color: combineRgb(0, 0, 0), bgcolor: combineRgb(220, 140, 0) },
+			options: [...GetDropdownWithVariables('Channel', 'channel', state.namedChoices.channels)],
+			callback: (event) => {
+				const channel = ActionUtil.getStringWithVariables(event, 'channel')
+				const ch = ActionUtil.getNodeNumberFromID(channel)
+				return _self.gainCompHandler?.isChannelCompOk(ch) === false
+			},
+			subscribe: () => {},
+			unsubscribe: () => {},
 		},
 	}
 

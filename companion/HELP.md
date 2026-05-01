@@ -80,6 +80,8 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Common | Adjust Send Panorama | Adjust the panorama of a send from a channel or aux to a bus or matrix. |
 | Common | Adjust Stereo Width (Relative) | Nudge the stereo width up or down. Use with encoder knobs on StreamDeck+. |
 | Common | Clear Solo | Clear the Solo from all channels, auxes, busses, matrices and mains. |
+| Common | Gain Comp - Disable | Disable gain compensation. |
+| Common | Gain Comp - Take Snapshot | Capture current gain and trim for all channels as the compensation reference. |
 | Common | Release All Mute Groups | Unmute all mute groups (1-8) simultaneously. |
 | Common | Reset Channel | Cut fader, unmute, zero trim, center pan, and reset width in one action. |
 | Common | Reset Input Trim | Reset the input trim of a channel or aux strip to 0 dB. |

@@ -25,6 +25,7 @@ import { OscForwarder } from './handlers/osc-forwarder.js'
 import debounceFn from 'debounce-fn'
 import { ModuleLogger } from './handlers/logger.js'
 import { CardsCommands } from './commands/cards.js'
+import { GainCompensationHandler } from './handlers/gain-compensation-handler.js'
 
 export class WingInstance extends InstanceBase<WingConfig> implements InstanceBaseExt<WingConfig> {
 	private readonly debounceHandleMessages: () => void
@@ -41,6 +42,7 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 	stateHandler: StateHandler | undefined
 	feedbackHandler: FeedbackHandler | undefined
 	variableHandler: VariableHandler | undefined
+	gainCompHandler: GainCompensationHandler | undefined
 	transitions: WingTransitions
 	oscForwarder: OscForwarder | undefined
 	logger: ModuleLogger | undefined
@@ -77,6 +79,7 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 		this.deviceDetector?.unsubscribe(this.id)
 		this.transitions.stopAll()
 		this.stopWlivePoller()
+		this.gainCompHandler?.destroy()
 	}
 
 	private start(config: WingConfig): void {
@@ -85,6 +88,7 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 		this.setupStateHandler()
 		this.setupFeedbackHandler()
 		this.setupVariableHandler()
+		this.setupGainCompHandler()
 		this.transitions.setUpdateRate(config.fadeUpdateRate ?? 50)
 		this.setupOscForwarder()
 		this.updateActions()
@@ -93,11 +97,30 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 
 	private stop(): void {
 		this.stopWlivePoller()
+		this.gainCompHandler?.destroy()
+		this.gainCompHandler = undefined
 		this.connection?.close()
 		this.stateHandler?.clearState()
 		this.oscForwarder?.close()
 		this.oscForwarder = undefined
 		this.variableHandler?.destroy()
+	}
+
+	private setupGainCompHandler(): void {
+		this.gainCompHandler = new GainCompensationHandler(this.model, this.logger)
+
+		this.gainCompHandler.on('update-variables', (vars: CompanionVariableValues) => {
+			this.setVariableValues(vars)
+		})
+		this.gainCompHandler.on('send', (cmd: string, val: number) => {
+			this.connection?.sendCommand(cmd, val, true).catch(() => {})
+		})
+		this.gainCompHandler.on('ensure-loaded', (path: string) => {
+			this.stateHandler?.ensureLoaded(path)
+		})
+		this.gainCompHandler.on('check-feedbacks', (ids: string[]) => {
+			this.checkFeedbacks(...ids)
+		})
 	}
 
 	private startWlivePoller(): void {
@@ -208,6 +231,7 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 		this.stateHandler?.processMessage(this.messages)
 		this.feedbackHandler?.processMessage(this.messages)
 		this.variableHandler?.processMessage(this.messages)
+		this.gainCompHandler?.processMessage(this.messages)
 	}
 
 	private setupStateHandler(): void {
