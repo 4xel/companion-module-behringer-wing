@@ -14,44 +14,45 @@ export function getBusVariables(model: ModelSpec): VariableDefinition[] {
 			variables.push({
 				variableId: `bus${bus}_main${main}_mute`,
 				name: `Bus ${bus} to Main ${main} Mute`,
+				path: Commands.Bus.MainSendOn(bus, main),
 			})
 			variables.push({
 				variableId: `bus${bus}_main${main}_level`,
 				name: `Bus ${bus} to Main ${main} Level`,
+				path: Commands.Bus.MainSendLevel(bus, main),
 			})
 		}
 		for (let send = 1; send <= model.busses; send++) {
-			if (bus == send) {
-				continue
-			}
+			if (bus == send) continue
 			variables.push({
 				variableId: `bus${bus}_bus${send}_mute`,
 				name: `Bus ${bus} to Bus ${send} Mute`,
+				path: Commands.Bus.SendOn(bus, send),
 			})
 			variables.push({
 				variableId: `bus${bus}_bus${send}_level`,
 				name: `Bus ${bus} to Bus ${send} Level`,
+				path: Commands.Bus.SendLevel(bus, send),
 			})
 			variables.push({
 				variableId: `bus${bus}_bus${send}_pan`,
 				name: `Bus ${bus} to Bus ${send} Pan`,
+				path: Commands.Bus.SendPan(bus, send),
 			})
 		}
 		for (let mtx = 1; mtx <= model.matrices; mtx++) {
 			variables.push({
 				variableId: `bus${bus}_mtx${mtx}_mute`,
 				name: `Bus ${bus} to Matrix ${mtx} Mute`,
+				path: Commands.Bus.MatrixSendOn(bus, mtx),
 			})
 			variables.push({
 				variableId: `bus${bus}_mtx${mtx}_level`,
 				name: `Bus ${bus} to Matrix ${mtx} Level`,
+				path: Commands.Bus.MatrixSendLevel(bus, mtx),
 			})
 		}
-
-		variables.push({
-			variableId: `bus${bus}_color`,
-			name: `Bus ${bus} Color`,
-		})
+		variables.push({ variableId: `bus${bus}_color`, name: `Bus ${bus} Color`, path: Commands.Bus.Color(bus) })
 	}
 
 	return variables

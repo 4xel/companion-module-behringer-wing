@@ -79,6 +79,11 @@ export function getAuxVariables(model: ModelSpec): VariableDefinition[] {
 				name: `Aux ${aux} to Bus ${bus} Pan`,
 				path: Commands.Aux.SendPan(aux, bus),
 			})
+			variables.push({
+				variableId: `aux${aux}_bus${bus}_mode`,
+				name: `Aux ${aux} to Bus ${bus} Mode (PRE/POST/GRP)`,
+				path: Commands.Aux.SendMode(aux, bus),
+			})
 		}
 		for (let mtx = 1; mtx <= model.matrices; mtx++) {
 			variables.push({
@@ -102,6 +107,16 @@ export function getAuxVariables(model: ModelSpec): VariableDefinition[] {
 			variableId: `aux${aux}_color`,
 			name: `Aux ${aux} Color`,
 			path: Commands.Aux.Color(aux),
+		})
+		variables.push({
+			variableId: `aux${aux}_src_grp`,
+			name: `Aux ${aux} Input Source Group`,
+			path: Commands.Aux.MainInputConnectionGroup(aux),
+		})
+		variables.push({
+			variableId: `aux${aux}_src_in`,
+			name: `Aux ${aux} Input Source Index`,
+			path: Commands.Aux.MainInputConnectionIndex(aux),
 		})
 	}
 

@@ -24,9 +24,9 @@ const RE_STRIP_WID = /^\/(ch|aux|bus|mtx|main)\/(\d+)\/wid$/
 const RE_STRIP_TRIM = /^\/(ch|aux)\/(\d+)\/in\/set\/trim$/
 const RE_STRIP_INV = /^\/(ch|aux)\/(\d+)\/in\/set\/inv$/
 const RE_ALT_SRC = /^\/(ch|aux)\/(\d+)\/in\/set\/altsrc$/
-const RE_SEND_MODE = /^\/ch\/(\d+)\/send\/(\d+)\/mode$/
-const RE_CONN_GRP = /^\/ch\/(\d+)\/in\/conn\/grp$/
-const RE_CONN_IN = /^\/ch\/(\d+)\/in\/conn\/in$/
+const RE_SEND_MODE = /^\/(ch|aux)\/(\d+)\/send\/(\d+)\/mode$/
+const RE_CONN_GRP = /^\/(ch|aux)\/(\d+)\/in\/conn\/grp$/
+const RE_CONN_IN = /^\/(ch|aux)\/(\d+)\/in\/conn\/in$/
 const RE_AES_STAT = /^\/([$\w]+)\/(A|B|C)\/stat$/
 
 export type VariableUpdate = { name: string; value: string | number }
@@ -154,20 +154,22 @@ export class VariableHandler extends EventEmitter {
 		}
 		const action = match[7] ?? match[8]
 
-		// Invert to get mute
-		if (action === 'on') value = Number(!(value == 1))
-
 		if (dest == null) {
-			const varName = `${source}${srcnum}_mute`
-			return [{ name: varName, value }]
+			// Invert /mute to get mute state
+			const muteValue = action === 'on' ? Number(!(value == 1)) : value
+			return [{ name: `${source}${srcnum}_mute`, value: muteValue }]
 		} else {
-			if (dest === 'send') {
-				dest = 'bus'
-			} else if (dest === 'MX') {
-				dest = 'mtx'
+			if (dest === 'send') dest = 'bus'
+			else if (dest === 'MX') dest = 'mtx'
+
+			if (action === 'on') {
+				// Emit both the inverted _mute and the raw _on variable
+				return [
+					{ name: `${source}${srcnum}_${dest}${destnum}_mute`, value: Number(!(value == 1)) },
+					{ name: `${source}${srcnum}_${dest}${destnum}_on`, value },
+				]
 			}
-			const varName = `${source}${srcnum}_${dest}${destnum}_mute`
-			return [{ name: varName, value }]
+			return [{ name: `${source}${srcnum}_${dest}${destnum}_mute`, value }]
 		}
 	}
 
@@ -629,22 +631,22 @@ export class VariableHandler extends EventEmitter {
 	}
 
 	private updateSendModeVariables(path: string, value: string): VariableUpdate[] | undefined {
-		// Send mode: /ch/N/send/B/mode → ch_N_bus_B_mode (PRE/POST/GRP)
+		// Send mode: /ch|aux/N/send/B/mode → ch_N_bus_B_mode / aux_N_bus_B_mode
 		const m = path.match(RE_SEND_MODE)
 		if (!m) return undefined
-		return [{ name: `ch${m[1]}_bus${m[2]}_mode`, value: value ?? '' }]
+		return [{ name: `${m[1]}${m[2]}_bus${m[3]}_mode`, value: value ?? '' }]
 	}
 
 	private updateInputPatchVariables(path: string, arg: OSCMetaArgument): VariableUpdate[] | undefined {
-		// Input source group: /ch/N/in/conn/grp → ch_N_src_grp
+		// Input source group: /ch|aux/N/in/conn/grp → {type}_N_src_grp
 		const grpMatch = path.match(RE_CONN_GRP)
 		if (grpMatch) {
-			return [{ name: `ch${grpMatch[1]}_src_grp`, value: (arg?.value as string) ?? '' }]
+			return [{ name: `${grpMatch[1]}${grpMatch[2]}_src_grp`, value: (arg?.value as string) ?? '' }]
 		}
-		// Input source index: /ch/N/in/conn/in → ch_N_src_in
+		// Input source index: /ch|aux/N/in/conn/in → {type}_N_src_in
 		const inMatch = path.match(RE_CONN_IN)
 		if (inMatch) {
-			return [{ name: `ch${inMatch[1]}_src_in`, value: (arg?.value as string | number) ?? '' }]
+			return [{ name: `${inMatch[1]}${inMatch[2]}_src_in`, value: (arg?.value as string | number) ?? '' }]
 		}
 		return undefined
 	}

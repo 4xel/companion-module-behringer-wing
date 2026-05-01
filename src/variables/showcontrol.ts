@@ -1,14 +1,27 @@
 import { VariableDefinition } from './index.js'
+import { ControlCommands } from '../commands/control.js'
 
 export function getShowControlVariables(): VariableDefinition[] {
 	const variables: VariableDefinition[] = []
 
-	variables.push({ variableId: 'active_show_name', name: 'Active Show Name' })
+	variables.push({
+		variableId: 'active_show_name',
+		name: 'Active Show Name',
+		path: ControlCommands.LibraryActiveShowName(),
+	})
+	variables.push({
+		variableId: 'active_scene_number',
+		name: 'Active Scene Number',
+		path: ControlCommands.LibraryActiveSceneIndex(),
+	})
+	variables.push({
+		variableId: 'active_scene_name',
+		name: 'Active Scene Name',
+		path: ControlCommands.LibraryActiveSceneName(),
+	})
 	variables.push({ variableId: 'previous_scene_number', name: 'Previous Scene Number' })
-	variables.push({ variableId: 'active_scene_number', name: 'Active Scene Number' })
 	variables.push({ variableId: 'next_scene_number', name: 'Next Scene Number' })
 	variables.push({ variableId: 'previous_scene_name', name: 'Previous Scene Name' })
-	variables.push({ variableId: 'active_scene_name', name: 'Active Scene Name' })
 	variables.push({ variableId: 'next_scene_name', name: 'Next Scene Name' })
 	variables.push({ variableId: 'active_scene_folder', name: 'Active Scene Folder' })
 

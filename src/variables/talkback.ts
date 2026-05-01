@@ -10,6 +10,11 @@ export function getTalkbackVariables(model: ModelSpec): VariableDefinition[] {
 	tbs.map((tb) => {
 		const upper = tb.toUpperCase()
 		const lower = tb.toLowerCase()
+		variables.push({
+			variableId: `cfg_talk_${lower}_on`,
+			name: `Talkback ${upper} Active (0/1)`,
+			path: Commands.Configuration.TalkbackOn(upper),
+		})
 		for (let bus = 1; bus <= model.busses; bus++) {
 			variables.push({
 				variableId: `talkback_${lower}_bus${bus}_assign`,
