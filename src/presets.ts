@@ -1907,13 +1907,13 @@ function getMonitorMasterPreset(bus: number): CompanionButtonPresetDefinition {
 				rotate_left: [
 					{
 						actionId: CommonActions.DeltaFader,
-						options: { sel: path, delta: -3, delta_use_variables: false, delta_use_percentage: false, fadeDuration: 0 },
+						options: { sel: path, delta: -1, delta_use_variables: false, delta_use_percentage: false, fadeDuration: 0 },
 					},
 				],
 				rotate_right: [
 					{
 						actionId: CommonActions.DeltaFader,
-						options: { sel: path, delta: 3, delta_use_variables: false, delta_use_percentage: false, fadeDuration: 0 },
+						options: { sel: path, delta: 1, delta_use_variables: false, delta_use_percentage: false, fadeDuration: 0 },
 					},
 				],
 			},
