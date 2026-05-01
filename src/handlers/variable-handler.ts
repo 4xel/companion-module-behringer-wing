@@ -675,14 +675,24 @@ export class VariableHandler extends EventEmitter {
 
 	processMessage(msgs: Set<OscMessage>): void {
 		// Fast path: emit gain and trim immediately, bypassing the batch debounce.
-		// All other variables go through the normal debounced path below.
+		// Uses the same args[2]/args[0] extraction as the gain comp handler —
+		// 3-arg full responses use args[2] (actual dB), 1-arg /*S pushes use args[0].
 		const immediate: CompanionVariableValues = {}
 		for (const msg of msgs) {
 			const args = msg.args as osc.MetaArgument[]
-			const gainUpdates = this.updateGainVariables(msg.address, args[0]?.value as number)
-			if (gainUpdates) for (const { name, value } of gainUpdates) immediate[name] = value
-			const trimUpdates = this.updateStripInputVariables(msg.address, args[0])
-			if (trimUpdates) for (const { name, value } of trimUpdates) immediate[name] = value
+			const gainMatch = msg.address.match(RE_GAIN)
+			if (gainMatch) {
+				const raw = args.length >= 3 ? args[2]?.value : args[0]?.value
+				const v = typeof raw === 'number' ? raw : typeof raw === 'string' ? parseFloat(raw) : NaN
+				if (!isNaN(v)) immediate[`${gainMatch[1]}${gainMatch[2]}_gain`] = this.round(v, 1)
+				continue
+			}
+			const trimMatch = msg.address.match(RE_STRIP_TRIM)
+			if (trimMatch) {
+				const raw = args.length >= 3 ? args[2]?.value : args[0]?.value
+				const v = typeof raw === 'number' ? raw : typeof raw === 'string' ? parseFloat(raw) : NaN
+				if (!isNaN(v)) immediate[`${trimMatch[1]}${trimMatch[2]}_trim`] = this.round(v, 1)
+			}
 		}
 		if (Object.keys(immediate).length > 0) this.emit('update-variables', immediate)
 
