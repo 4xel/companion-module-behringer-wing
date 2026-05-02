@@ -32,6 +32,7 @@ import { MuteGroupCommands } from '../commands/mutegroup.js'
 import { IoCommands } from '../commands/io.js'
 import { ConfigurationCommands } from '../commands/config.js'
 import { ChannelCommands } from '../commands/channel.js'
+import { GAIN_QUEUE_SLOTS } from '../handlers/gain-compensation-handler.js'
 
 export enum CommonActions {
 	// Setup
@@ -135,6 +136,9 @@ export enum CommonActions {
 	// Batch multi-parameter
 	BatchKillSends = 'batch-kill-sends',
 	BatchMicroScene = 'batch-micro-scene',
+
+	// Gain compensation queue
+	CompensateQueueSlot = 'compensate-queue-slot',
 }
 
 export function createCommonActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
@@ -1715,6 +1719,23 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): Companio
 				const params = ActionUtil.getStringWithVariables(event, 'params')
 				if (!node || !params) return
 				await send(node, params)
+			},
+		},
+
+		[CommonActions.CompensateQueueSlot]: {
+			name: 'Gain Comp - Compensate Queue Slot',
+			description:
+				'Apply gain compensation to the channel currently occupying the given queue slot. Does nothing if the slot is empty.',
+			options: [
+				GetDropdown(
+					'Slot',
+					'slot',
+					Array.from({ length: GAIN_QUEUE_SLOTS }, (_, i) => ({ id: String(i + 1), label: `Slot ${i + 1}` })),
+				),
+			],
+			callback: async (event) => {
+				const slot = parseInt(event.options['slot'] as string)
+				self.gainCompHandler?.compensateQueueSlot(slot)
 			},
 		},
 	}

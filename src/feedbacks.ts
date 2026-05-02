@@ -31,6 +31,7 @@ import { IoCommands } from './commands/io.js'
 import { getCardsChoices, getCardsStatusChoices, getCardsActionChoices } from './choices/cards.js'
 import { EffectCommands, resolveInsertOnPath } from './commands/effect.js'
 import { WingState } from './state/state.js'
+import { GAIN_QUEUE_SLOTS } from './handlers/gain-compensation-handler.js'
 
 /**
  * Extract the actual value from a Wing state entry.
@@ -81,6 +82,7 @@ export enum FeedbackId {
 	GainCompSnapshotExists = 'gain-comp-snapshot-exists',
 	ChannelNeedsComp = 'channel-needs-comp',
 	GainDisplay = 'ch-gain-display',
+	GainQueueSlot = 'gain-queue-slot',
 	FaderDisplay = 'fader-display',
 	StripColour = 'strip-colour',
 }
@@ -974,6 +976,9 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 			unsubscribe: () => {},
 		},
 
+		// Placeholder — advanced type, defined below.
+		[FeedbackId.GainQueueSlot]: undefined,
+
 		// Placeholder — FaderDisplay is advanced type, defined below.
 		[FeedbackId.FaderDisplay]: undefined,
 
@@ -990,7 +995,48 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 		...state.namedChoices.mains,
 		...state.namedChoices.dcas,
 	]
+	const slotChoices = Array.from({ length: GAIN_QUEUE_SLOTS }, (_, i) => ({
+		id: String(i + 1),
+		label: `Slot ${i + 1}`,
+	}))
+
 	const advancedFeedbacks = {
+		[FeedbackId.GainQueueSlot]: {
+			type: 'advanced' as const,
+			name: 'Gain Comp - Queue Slot',
+			description:
+				'Shows the channel pending gain compensation at the given queue position. Blank when the slot is empty.',
+			options: [GetDropdown('Slot', 'slot', slotChoices)],
+			callback: (event: CompanionFeedbackInfo): CompanionAdvancedFeedbackResult => {
+				const slot = parseInt(event.options['slot'] as string)
+				const handler = _self.gainCompHandler
+				if (!handler) return {}
+				const ch = handler.getQueueSlot(slot)
+				if (ch === undefined) {
+					return {
+						text: `#${slot}\nGain Comp\nempty`,
+						bgcolor: combineRgb(20, 20, 20),
+						color: combineRgb(80, 80, 80),
+						size: 'auto',
+					}
+				}
+				const name = _self.stateHandler?.state?.names.channels[ch - 1] ?? `CH${ch}`
+				const delta = handler.getCompDelta(ch)
+				const deltaStr = delta !== undefined ? `Δ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}dB` : ''
+				const gain = handler['gainCache']?.get(ch)
+				const trim = handler['trimCache']?.get(ch)
+				const gainStr = gain !== undefined ? `${Math.round(gain * 10) / 10}` : '—'
+				const trimStr = trim !== undefined ? `${Math.round(trim * 10) / 10}` : '—'
+				return {
+					text: `#${slot} ch${ch}\n${name}\n${deltaStr}\n${gainStr} | ${trimStr}`,
+					bgcolor: combineRgb(180, 90, 0),
+					color: combineRgb(255, 255, 255),
+					size: 'auto',
+				}
+			},
+			subscribe: () => {},
+			unsubscribe: () => {},
+		},
 		[FeedbackId.FaderDisplay]: {
 			type: 'advanced' as const,
 			name: 'Fader - Live Level Display',

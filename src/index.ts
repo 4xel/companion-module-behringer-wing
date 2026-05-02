@@ -25,7 +25,7 @@ import { OscForwarder } from './handlers/osc-forwarder.js'
 import debounceFn from 'debounce-fn'
 import { ModuleLogger } from './handlers/logger.js'
 import { CardsCommands } from './commands/cards.js'
-import { GainCompensationHandler } from './handlers/gain-compensation-handler.js'
+import { GainCompensationHandler, GAIN_QUEUE_SLOTS } from './handlers/gain-compensation-handler.js'
 
 export class WingInstance extends InstanceBase<WingConfig> implements InstanceBaseExt<WingConfig> {
 	private readonly debounceHandleMessages: () => void
@@ -120,6 +120,15 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 		})
 		this.gainCompHandler.on('check-feedbacks', (ids: string[]) => {
 			this.checkFeedbacks(...ids)
+		})
+		this.gainCompHandler.on('queue-changed', (queue: number[]) => {
+			const vars: CompanionVariableValues = {}
+			for (let i = 0; i < GAIN_QUEUE_SLOTS; i++) {
+				const ch = queue[i]
+				vars[`comp_queue_name_${i + 1}`] =
+					ch !== undefined ? (this.stateHandler?.state?.names.channels[ch - 1] ?? `CH${ch}`) : ''
+			}
+			this.setVariableValues(vars)
 		})
 	}
 
@@ -231,6 +240,7 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 			this.connected = true
 
 			this.logger?.info('OSC connection established')
+			this.gainCompHandler?.takeSnapshot()
 		}
 		this.feedbackHandler?.clearPollTimeout()
 		this.stateHandler?.processMessage(this.messages)

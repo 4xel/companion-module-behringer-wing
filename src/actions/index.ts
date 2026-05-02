@@ -14,6 +14,7 @@ import { createCommonActions } from './common.js'
 import { createControlActions } from './control.js'
 import { createIoActions } from './io.js'
 import { createFxActions } from './fx.js'
+import { createTalkbackSwitcherActions } from './talkback.js'
 
 export function createActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
 	const actions = {
@@ -30,6 +31,7 @@ export function createActions(self: InstanceBaseExt<WingConfig>): CompanionActio
 		...createControlActions(self),
 		...createIoActions(self),
 		...createFxActions(self),
+		...createTalkbackSwitcherActions(self),
 	}
 
 	return actions

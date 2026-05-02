@@ -9,6 +9,8 @@ import { FxActionId } from './actions/fx.js'
 import { EffectCommands } from './commands/effect.js'
 import { CardsActionId } from './actions/cards.js'
 import { UsbPlayerActionId } from './actions/usbplayer.js'
+import { TalkbackSwitcherActionId } from './actions/talkback.js'
+import { GAIN_QUEUE_SLOTS } from './handlers/gain-compensation-handler.js'
 
 export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPresetDefinitions {
 	const model = _instance.model
@@ -108,6 +110,43 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 	presets['talkback-a-latch'] = getTalkbackLatchPreset('A')
 	presets['talkback-b-latch'] = getTalkbackLatchPreset('B')
 
+	// ── Talkback Switcher ────────────────────────────────────────────────────
+	const swState = _instance.stateHandler?.state
+	const tbSwDestinations = [
+		...(swState?.namedChoices.busses ?? []),
+		...(swState?.namedChoices.matrices ?? []),
+		...(swState?.namedChoices.mains ?? []),
+	]
+	const tbSwNames = {
+		busses: swState?.names.busses ?? [],
+		matrices: swState?.names.matrices ?? [],
+		mains: swState?.names.mains ?? [],
+	}
+
+	presets['tbsw-a-all'] = getTbSwAllCallPreset('A')
+	presets['tbsw-b-all'] = getTbSwAllCallPreset('B')
+	presets['tbsw-a-back'] = getTbSwBackPreset('A')
+	presets['tbsw-b-back'] = getTbSwBackPreset('B')
+	presets['tbsw-a-off'] = getTbSwOffPreset('A')
+	presets['tbsw-b-off'] = getTbSwOffPreset('B')
+	presets['tbsw-a-ptt'] = getTbSwPttPreset('A')
+	presets['tbsw-b-ptt'] = getTbSwPttPreset('B')
+	presets['tbsw-ab-ptt'] = getTbSwDualPttPreset()
+	presets['tbsw-ab-all'] = getTbSwDualAllCallPreset()
+
+	for (const dest of tbSwDestinations) {
+		const destId = dest.id as string
+		const idx = parseInt(destId.split('/')[2]) - 1
+		const destName = (() => {
+			if (destId.startsWith('/bus/')) return tbSwNames.busses[idx] ?? dest.label
+			if (destId.startsWith('/mtx/')) return tbSwNames.matrices[idx] ?? dest.label
+			return tbSwNames.mains[idx] ?? dest.label
+		})()
+		const safeKey = destId.replace(/\//g, '-').replace(/^-/, '')
+		presets[`tbsw-a-${safeKey}`] = getTbSwExclusivePreset('A', destId, destName, combineRgb(180, 80, 0))
+		presets[`tbsw-b-${safeKey}`] = getTbSwExclusivePreset('B', destId, destName, combineRgb(160, 0, 0))
+	}
+
 	for (let i = 1; i <= model.busses; i++) {
 		presets[`mon-bus${i}-master`] = getMonitorMasterPreset(i)
 		for (let ch = 1; ch <= model.channels; ch++) {
@@ -164,6 +203,9 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`comp-ch${i}-strip`] = getGainCompChannelStripPreset(i)
 		presets[`comp-ch${i}-gain-knob`] = getGainCompGainKnobPreset(i)
 		presets[`comp-ch${i}-trim-knob`] = getGainCompTrimKnobPreset(i)
+	}
+	for (let slot = 1; slot <= GAIN_QUEUE_SLOTS; slot++) {
+		presets[`comp-queue-${slot}`] = getGainQueueSlotPreset(slot)
 	}
 
 	// USB player
@@ -2112,6 +2154,290 @@ function getSendLevelKnobPreset(ch: number, bus: number): CompanionButtonPresetD
 				feedbackId: FeedbackId.SendMute,
 				options: { src, dest, src_use_variables: false, dest_use_variables: false, mute: 1 },
 				style: { bgcolor: combineRgb(60, 0, 0) },
+			},
+		],
+	}
+}
+
+// ─── Talkback Switcher presets ────────────────────────────────────────────────
+
+function getTbSwExclusivePreset(
+	tb: 'A' | 'B',
+	dest: string,
+	name: string,
+	activeBg: number,
+): CompanionButtonPresetDefinition {
+	return {
+		name: `TB ${tb} → ${name}`,
+		category: 'Talkback Switcher',
+		type: 'button',
+		style: {
+			text: `${tb}:${name}`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(30, 30, 30),
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: TalkbackSwitcherActionId.ExclusiveDest,
+						options: {
+							tb,
+							dest,
+							open_mic: '0',
+							tb_use_variables: false,
+							dest_use_variables: false,
+							open_mic_use_variables: false,
+						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.TalkbackAssign,
+				options: {
+					tb,
+					tb_use_variables: false,
+					dest,
+					dest_use_variables: false,
+					assign: '1',
+					assign_use_variables: false,
+				},
+				style: { bgcolor: activeBg, color: combineRgb(255, 255, 255) },
+			},
+		],
+	}
+}
+
+function getTbSwAllCallPreset(tb: 'A' | 'B'): CompanionButtonPresetDefinition {
+	return {
+		name: `TB ${tb} → ALL`,
+		category: 'Talkback Switcher',
+		type: 'button',
+		style: {
+			text: `${tb}:ALL`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(30, 30, 30),
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: TalkbackSwitcherActionId.AllCall,
+						options: { tb, tb_use_variables: false },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.Talkback,
+				options: { tb, on: '1', tb_use_variables: false, on_use_variables: false },
+				style: { bgcolor: combineRgb(220, 220, 220), color: combineRgb(0, 0, 0) },
+			},
+		],
+	}
+}
+
+function getTbSwBackPreset(tb: 'A' | 'B'): CompanionButtonPresetDefinition {
+	return {
+		name: `TB ${tb} — Back`,
+		category: 'Talkback Switcher',
+		type: 'button',
+		style: {
+			text: `${tb}:Back`,
+			size: 'auto',
+			color: combineRgb(200, 200, 200),
+			bgcolor: combineRgb(60, 60, 60),
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: TalkbackSwitcherActionId.Back,
+						options: { tb, tb_use_variables: false },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+}
+
+function getTbSwOffPreset(tb: 'A' | 'B'): CompanionButtonPresetDefinition {
+	return {
+		name: `TB ${tb} — OFF`,
+		category: 'Talkback Switcher',
+		type: 'button',
+		style: {
+			text: `${tb}:OFF`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(80, 0, 0),
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: TalkbackSwitcherActionId.Off,
+						options: { tb, tb_use_variables: false },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+}
+
+function getTbSwPttPreset(tb: 'A' | 'B'): CompanionButtonPresetDefinition {
+	return {
+		name: `TB ${tb} — PTT`,
+		category: 'Talkback Switcher',
+		type: 'button',
+		style: {
+			text: `${tb}:PTT`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(30, 30, 30),
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: ConfigActions.TalkbackOn,
+						options: { tb, solo: 1, tb_use_variables: false, solo_use_variables: false },
+					},
+				],
+				up: [
+					{
+						actionId: ConfigActions.TalkbackOn,
+						options: { tb, solo: 0, tb_use_variables: false, solo_use_variables: false },
+					},
+				],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.Talkback,
+				options: { tb, on: '1', tb_use_variables: false, on_use_variables: false },
+				style: { bgcolor: combineRgb(255, 0, 0), color: combineRgb(255, 255, 255) },
+			},
+		],
+	}
+}
+
+function getTbSwDualPttPreset(): CompanionButtonPresetDefinition {
+	return {
+		name: 'TB A + B — PTT',
+		category: 'Talkback Switcher',
+		type: 'button',
+		style: {
+			text: 'A+B PTT',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(30, 30, 30),
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: ConfigActions.TalkbackOn,
+						options: { tb: 'A', solo: 1, tb_use_variables: false, solo_use_variables: false },
+					},
+					{
+						actionId: ConfigActions.TalkbackOn,
+						options: { tb: 'B', solo: 1, tb_use_variables: false, solo_use_variables: false },
+					},
+				],
+				up: [
+					{
+						actionId: ConfigActions.TalkbackOn,
+						options: { tb: 'A', solo: 0, tb_use_variables: false, solo_use_variables: false },
+					},
+					{
+						actionId: ConfigActions.TalkbackOn,
+						options: { tb: 'B', solo: 0, tb_use_variables: false, solo_use_variables: false },
+					},
+				],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.Talkback,
+				options: { tb: 'A', on: '1', tb_use_variables: false, on_use_variables: false },
+				style: { bgcolor: combineRgb(255, 0, 0), color: combineRgb(255, 255, 255) },
+			},
+		],
+	}
+}
+
+function getTbSwDualAllCallPreset(): CompanionButtonPresetDefinition {
+	return {
+		name: 'TB A + B — ALL',
+		category: 'Talkback Switcher',
+		type: 'button',
+		style: {
+			text: 'A+B ALL',
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(30, 30, 30),
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: TalkbackSwitcherActionId.AllCall,
+						options: { tb: 'AB', tb_use_variables: false },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.Talkback,
+				options: { tb: 'A', on: '1', tb_use_variables: false, on_use_variables: false },
+				style: { bgcolor: combineRgb(220, 220, 220), color: combineRgb(0, 0, 0) },
+			},
+		],
+	}
+}
+
+// ─── Gain compensation queue presets ─────────────────────────────────────────
+
+function getGainQueueSlotPreset(slot: number): CompanionButtonPresetDefinition {
+	return {
+		name: `Gain Queue ${slot}`,
+		category: 'Gain Compensation',
+		type: 'button',
+		style: {
+			text: `#${slot}`,
+			size: 'auto',
+			color: combineRgb(200, 200, 200),
+			bgcolor: combineRgb(20, 20, 20),
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: CommonActions.CompensateQueueSlot,
+						options: { slot: String(slot) },
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.GainQueueSlot,
+				options: { slot: String(slot) },
 			},
 		],
 	}

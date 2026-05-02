@@ -174,6 +174,8 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Other | Send Command | Send an OSC command with no argument to the console. |
 | Other | Send Command with Number | Send an OSC command with a number as an argument to the console. |
 | Other | Send Command with String | Send an OSC command with a string as an argument to the console. |
+| talkback | Talkback - Off (Clear All Destinations) | Clear all talkback destination assignments. Mic state is left unchanged. |
+| talkback | Talkback - Toggle Destination (Additive) | Toggle a single talkback destination on/off without clearing the others. |
 | USB Player | USB: Playback Action | Start, stop, pause, jump to previous or next in the USB player. |
 | USB Player | USB: Record Action | Start, stop, pause or create a new file in the USB recorder. |
 | USB Player | USB: Set Repeat | Enable the repeat functionality of the USB player |

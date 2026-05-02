@@ -13,6 +13,8 @@ const TRIM_MAX = 18
 const TRIM_TOLERANCE = 0.05
 const SWEEP_MS = 5000
 
+export const GAIN_QUEUE_SLOTS = 15
+
 interface ChannelRef {
 	gain: number
 	trim: number
@@ -44,6 +46,9 @@ export class GainCompensationHandler extends EventEmitter {
 	private enabled = false
 	private mode: 'auto' | 'manual' = 'auto'
 	private refs = new Map<number, ChannelRef>()
+
+	// FIFO queue of channels with pending gain changes (not yet compensated).
+	private queue: number[] = []
 
 	// Current observed values — actual dB, no normalization
 	private gainCache = new Map<number, number>()
@@ -86,7 +91,8 @@ export class GainCompensationHandler extends EventEmitter {
 				this.emit('check-feedbacks', ['ch-gain-display'])
 
 				if (this.refs.has(ch)) {
-					this.emit('check-feedbacks', ['channel-needs-comp', 'ch-gain-display'])
+					this.emit('check-feedbacks', ['channel-needs-comp', 'ch-gain-display', 'gain-queue-slot'])
+					this.updateQueue(ch)
 					if (this.enabled && this.mode === 'auto' && !this.isChannelCompOk(ch)) {
 						this.applyCompensationForChannel(ch)
 					}
@@ -104,7 +110,7 @@ export class GainCompensationHandler extends EventEmitter {
 
 				this.trimCache.set(ch, trim)
 				this.emitChannelVariables(ch)
-				if (this.refs.has(ch)) this.emit('check-feedbacks', ['channel-needs-comp'])
+				if (this.refs.has(ch)) this.emit('check-feedbacks', ['channel-needs-comp', 'gain-queue-slot'])
 			}
 		}
 	}
@@ -146,6 +152,20 @@ export class GainCompensationHandler extends EventEmitter {
 		this.emit('ensure-loaded', ChannelCommands.InputGain(c))
 		this.emit('ensure-loaded', ChannelCommands.InputTrim(c))
 		setTimeout(() => this.applyCompensationForChannel(c), 400)
+	}
+
+	compensateQueueSlot(slot: number): void {
+		const ch = this.queue[slot - 1]
+		if (ch === undefined) return
+		this.compensateChannel(ch)
+	}
+
+	getQueueSlot(slot: number): number | undefined {
+		return this.queue[slot - 1]
+	}
+
+	getQueue(): number[] {
+		return [...this.queue]
 	}
 
 	isEnabled(): boolean {
@@ -202,6 +222,23 @@ export class GainCompensationHandler extends EventEmitter {
 		this.emit('check-feedbacks', ['gain-comp-snapshot-exists'])
 	}
 
+	private updateQueue(ch: number): void {
+		const compOk = this.isChannelCompOk(ch)
+		const idx = this.queue.indexOf(ch)
+		if (compOk && idx !== -1) {
+			this.queue.splice(idx, 1)
+			this.emitQueueChanged()
+		} else if (!compOk && idx === -1) {
+			this.queue.push(ch)
+			this.emitQueueChanged()
+		}
+	}
+
+	private emitQueueChanged(): void {
+		this.emit('queue-changed', [...this.queue])
+		this.emit('check-feedbacks', ['gain-queue-slot'])
+	}
+
 	private applyCompensationForChannel(ch: number): void {
 		const ref = this.refs.get(ch)
 		if (!ref) return
@@ -235,6 +272,12 @@ export class GainCompensationHandler extends EventEmitter {
 		this.logger?.debug(`GainComp: ch${ch} Δgain=${delta.toFixed(2)}dB → trim=${newTrim.toFixed(2)}dB`)
 		this.emitChannelVariables(ch)
 		this.emit('check-feedbacks', ['channel-needs-comp'])
+
+		const qIdx = this.queue.indexOf(ch)
+		if (qIdx !== -1) {
+			this.queue.splice(qIdx, 1)
+			this.emitQueueChanged()
+		}
 	}
 
 	private startSweep(): void {
