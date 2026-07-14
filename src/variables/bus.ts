@@ -6,7 +6,7 @@ export function getBusVariables(model: ModelSpec): VariableDefinition[] {
 	const variables: VariableDefinition[] = []
 
 	for (let bus = 1; bus <= model.busses; bus++) {
-		variables.push({ variableId: `bus${bus}_name`, name: `Bus ${bus} Name`, path: Commands.Bus.Name(bus) })
+		variables.push({ variableId: `bus${bus}_name`, name: `Bus ${bus} Name`, path: Commands.Bus.RealName(bus) })
 		variables.push({ variableId: `bus${bus}_mute`, name: `Bus ${bus} Mute`, path: Commands.Bus.Mute(bus) })
 		variables.push({ variableId: `bus${bus}_level`, name: `Bus ${bus} Level`, path: Commands.Bus.Fader(bus) })
 		variables.push({ variableId: `bus${bus}_pan`, name: `Bus ${bus} Pan`, path: Commands.Bus.Pan(bus) })

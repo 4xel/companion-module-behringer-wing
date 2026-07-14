@@ -32,6 +32,11 @@ export namespace BusCommands {
 		return `${Node(bus)}/name`
 	}
 
+	/** Effective display name ($name): the custom name, or the console default (e.g. "Bus 6") when unset. */
+	export function RealName(bus: number): string {
+		return `${Node(bus)}/$name`
+	}
+
 	export function Icon(bus: number): string {
 		return `${Node(bus)}/icon`
 	}

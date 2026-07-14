@@ -170,9 +170,9 @@ export class WingState implements IStoredChannelSubject {
 
 		this.namedChoices.busses = []
 		for (let bus = 1; bus <= model.busses; bus++) {
-			this.names.busses.push(this.getRealName(Commands.Bus.Name(bus)) ?? `Bus ${bus}`)
+			this.names.busses.push(this.getRealName(Commands.Bus.RealName(bus)) ?? `Bus ${bus}`)
 			this.namedChoices.busses.push(
-				this.getNameForChoice(bus, Commands.Bus.Node(bus), Commands.Bus.Name(bus), 'Bus', 'B'),
+				this.getNameForChoice(bus, Commands.Bus.Node(bus), Commands.Bus.RealName(bus), 'Bus', 'B'),
 			)
 		}
 
@@ -230,7 +230,7 @@ export class WingState implements IStoredChannelSubject {
 			void sendCommand(Commands.Aux.RealName(aux))
 		}
 		for (let bus = 1; bus <= model.busses; bus++) {
-			void sendCommand(Commands.Bus.Name(bus))
+			void sendCommand(Commands.Bus.RealName(bus))
 		}
 		for (let mtx = 1; mtx <= model.matrices; mtx++) {
 			void sendCommand(Commands.Matrix.RealName(mtx))
