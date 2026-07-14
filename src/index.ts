@@ -30,6 +30,7 @@ export { UpgradeScripts }
 
 export default class WingInstance extends InstanceBase<WingSchema> implements InstanceBaseExt<WingConfig> {
 	private readonly debounceHandleMessages: () => void
+	private readonly debouncedRebuildDefinitions: () => void
 	private readonly messages = new Set<OscMessage>()
 
 	config!: WingConfig
@@ -67,6 +68,27 @@ export default class WingInstance extends InstanceBase<WingSchema> implements In
 				after: true,
 			},
 		)
+		// Rebuilding action/feedback/preset definitions is expensive and pushes a large payload
+		// over IPC. State updates arrive in bursts (e.g. as names load on connect), so debounce
+		// the rebuild to coalesce them into one push instead of flooding the IPC channel.
+		this.debouncedRebuildDefinitions = debounceFn(() => this.rebuildDefinitions(), {
+			wait: 400,
+			maxWait: 2000,
+			before: false,
+			after: true,
+		})
+	}
+
+	/**
+	 * Rebuild and push all action, feedback and preset definitions, then re-check feedbacks.
+	 * Kept in one place so it isn't sent multiple times per update.
+	 */
+	private rebuildDefinitions(): void {
+		this.updateActions()
+		this.updateFeedbacks()
+		const presetsData = GetPresets(this)
+		this.setPresetDefinitions(presetsData.structure, presetsData.presets)
+		this.checkAllFeedbacks()
 	}
 
 	async init(config: WingConfig): Promise<void> {
@@ -95,8 +117,10 @@ export default class WingInstance extends InstanceBase<WingSchema> implements In
 		this.setupGainCompHandler()
 		this.transitions.setUpdateRate(config.fadeUpdateRate ?? 50)
 		this.setupOscForwarder()
-		this.updateActions()
-		this.updateFeedbacks()
+		// Defer the first definition push out of the synchronous init/start path so init()
+		// returns promptly (building + sending all definitions inline was overrunning
+		// Companion's init call timeout and forcing a restart).
+		setTimeout(() => this.rebuildDefinitions(), 0)
 	}
 
 	private stop(): void {
@@ -273,13 +297,8 @@ export default class WingInstance extends InstanceBase<WingSchema> implements In
 		})
 
 		this.stateHandler.on('update', () => {
-			this.updateActions()
-			this.updateFeedbacks()
-			const presetsData = GetPresets(this)
-			this.setPresetDefinitions(presetsData.structure, presetsData.presets)
-			this.setActionDefinitions(createActions(this))
-			this.setFeedbackDefinitions(GetFeedbacksList(this))
-			this.checkAllFeedbacks()
+			// Coalesce bursts of state updates into a single (debounced) definition rebuild.
+			this.debouncedRebuildDefinitions()
 		})
 	}
 
