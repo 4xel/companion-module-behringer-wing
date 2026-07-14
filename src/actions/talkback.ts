@@ -143,7 +143,7 @@ export function createTalkbackSwitcherActions(self: InstanceBaseExt<WingConfig>)
 		[TalkbackSwitcherActionId.AllCall]: {
 			name: 'Talkback - All Call',
 			description:
-				'Route talkback to a configurable set of destinations and open the mic. Use the destination list to define what "all" means for your session.',
+				'Assign talkback to a configurable set of destinations (the mic/latch is left unchanged). Use the destination list to define what "all" means for your session.',
 			options: [
 				...GetDropdownWithVariables('Talkback', 'tb', [...getTalkbackOptions(), getIdLabelPair('AB', 'Both (A + B)')]),
 				{
@@ -173,7 +173,7 @@ export function createTalkbackSwitcherActions(self: InstanceBaseExt<WingConfig>)
 							state.set(cmd, [{ type: 'i', value: 1 }])
 						}
 					}
-					await send(ConfigurationCommands.TalkbackOn(talkback), 1)
+					// Note: intentionally does not open the mic/latch — All Call only sets destinations.
 				}
 
 				if (tb === 'AB') {
