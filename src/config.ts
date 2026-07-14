@@ -2,6 +2,7 @@ import { type SomeCompanionConfigField } from '@companion-module/base'
 import { WingDeviceDetectorInstance } from './handlers/device-detector.js'
 import { ModelChoices, WingModel } from './models/types.js'
 import { InstanceBaseExt } from './types.js'
+import { TALKBACK_GROUP_COUNT, getTalkbackDestChoices } from './talkback-groups.js'
 // import { ModelChoices, WingModel } from './models/types.js'
 
 export const fadeUpdateRateDefault = 50
@@ -253,5 +254,38 @@ export function GetConfigFields(_self: InstanceBaseExt<WingConfig>): SomeCompani
 			default: false,
 			isVisibleExpression: `$(options:show-advanced-options) == true`,
 		},
+		{
+			type: 'static-text',
+			id: 'tbgroups-header',
+			width: 12,
+			label: 'Talkback Groups',
+			value:
+				'Define reusable talkback destination groups (a name + its destinations). Reference a group by name from the ' +
+				'"Talkback - All Call" action and the "Talkback - All Selected Destinations Assigned" feedback, so the group\'s ' +
+				'busses are defined in one place instead of on every button.',
+			isVisibleExpression: `$(options:show-advanced-options) == true`,
+		},
+		...Array.from({ length: TALKBACK_GROUP_COUNT }, (_, i): SomeCompanionConfigField[] => {
+			const n = i + 1
+			return [
+				{
+					type: 'textinput',
+					id: `tbgroup${n}_name`,
+					label: `Group ${n} Name`,
+					width: 4,
+					default: '',
+					isVisibleExpression: `$(options:show-advanced-options) == true`,
+				},
+				{
+					type: 'multidropdown',
+					id: `tbgroup${n}_dests`,
+					label: `Group ${n} Destinations`,
+					width: 8,
+					choices: getTalkbackDestChoices(_self.model),
+					default: [],
+					isVisibleExpression: `$(options:show-advanced-options) == true`,
+				},
+			]
+		}).flat(),
 	]
 }

@@ -8,6 +8,7 @@ import { ConfigurationCommands } from '../commands/config.js'
 import { StateUtil } from '../state/index.js'
 import * as ActionUtil from './utils.js'
 import { getIdLabelPair } from '../choices/utils.js'
+import { getTalkbackGroupChoices, resolveTalkbackGroupDests } from '../talkback-groups.js'
 
 export enum TalkbackSwitcherActionId {
 	ExclusiveDest = 'tb-exclusive-dest',
@@ -147,17 +148,31 @@ export function createTalkbackSwitcherActions(self: InstanceBaseExt<WingConfig>)
 			options: [
 				...GetDropdownWithVariables('Talkback', 'tb', [...getTalkbackOptions(), getIdLabelPair('AB', 'Both (A + B)')]),
 				{
+					type: 'dropdown',
+					id: 'destgroup',
+					label: 'Destination group',
+					default: 'all',
+					choices: getTalkbackGroupChoices(self.config),
+				} satisfies SomeCompanionActionInputField,
+				{
 					type: 'multidropdown',
 					id: 'allcall_dests',
-					label: 'Destinations (your "all call" set)',
+					label: 'Custom destinations',
 					choices: destinations,
 					default: destinations.map((d) => d.id),
 					minSelection: 1,
+					isVisibleExpression: `$(options:destgroup) == 'custom'`,
 				} satisfies SomeCompanionActionInputField,
 			],
 			callback: async (event) => {
 				const tb = ActionUtil.getStringWithVariables(event, 'tb')
-				const selected = (event.options['allcall_dests'] ?? []) as string[]
+				const customDests = (event.options['allcall_dests'] ?? []) as string[]
+				const selected = resolveTalkbackGroupDests(
+					self.config,
+					event.options['destgroup'] as string,
+					self.model,
+					customDests,
+				)
 
 				const doAllCall = async (talkback: string) => {
 					snapshotCurrent(talkback)

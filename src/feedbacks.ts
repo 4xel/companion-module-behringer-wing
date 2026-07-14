@@ -16,6 +16,7 @@ import {
 	GetSendSourceDestinationFieldsWithVariables,
 } from './choices/common.js'
 import { getTalkbackOptions } from './choices/config.js'
+import { getTalkbackGroupChoices, resolveTalkbackGroupDests } from './talkback-groups.js'
 import { ConfigurationCommands } from './commands/config.js'
 import { getNodeNumber } from './actions/utils.js'
 import { StateUtil } from './state/index.js'
@@ -185,7 +186,13 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 	const talkbackAllAssignCommands = (event: CompanionFeedbackInfo): string[] => {
 		const tb = ActionUtil.getStringWithVariables(event, 'tb')
 		const talkbacks = tb === 'AB' ? ['A', 'B'] : [tb]
-		const selected = (event.options['dests'] as string[] | undefined) ?? talkbackDestChoices.map((d) => d.id as string)
+		const customDests = (event.options['dests'] as string[] | undefined) ?? []
+		const selected = resolveTalkbackGroupDests(
+			_self.config,
+			event.options['destgroup'] as string,
+			_self.model,
+			customDests,
+		)
 		const cmds: string[] = []
 		for (const tbk of talkbacks) {
 			for (const destId of selected) {
@@ -804,12 +811,20 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 			options: [
 				...GetDropdownWithVariables('Talkback', 'tb', [...getTalkbackOptions(), getIdLabelPair('AB', 'Both (A + B)')]),
 				{
+					type: 'dropdown',
+					id: 'destgroup',
+					label: 'Destination group',
+					default: 'all',
+					choices: getTalkbackGroupChoices(_self.config),
+				},
+				{
 					type: 'multidropdown',
 					id: 'dests',
-					label: 'Destinations (all of these must be assigned)',
+					label: 'Custom destinations (all of these must be assigned)',
 					choices: talkbackDestChoices,
 					default: talkbackDestChoices.map((d) => d.id),
 					minSelection: 1,
+					isVisibleExpression: `$(options:destgroup) == 'custom'`,
 				},
 			],
 			defaultStyle: { bgcolor: combineRgb(220, 220, 220), color: combineRgb(0, 0, 0) },

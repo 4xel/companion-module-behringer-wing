@@ -2552,7 +2552,7 @@ function getTbSwAllCallPreset(tb: 'A' | 'B'): WingPreset {
 				down: [
 					{
 						actionId: TalkbackSwitcherActionId.AllCall,
-						options: { tb, tb_use_variables: false },
+						options: { tb, tb_use_variables: false, destgroup: 'all' },
 					},
 				],
 				up: [],
@@ -2561,7 +2561,7 @@ function getTbSwAllCallPreset(tb: 'A' | 'B'): WingPreset {
 		feedbacks: [
 			{
 				feedbackId: FeedbackId.TalkbackAllAssigned,
-				options: { tb, tb_use_variables: false },
+				options: { tb, tb_use_variables: false, destgroup: 'all' },
 				style: { bgcolor: combineRgb(220, 220, 220), color: combineRgb(0, 0, 0) },
 			},
 		],
@@ -2718,7 +2718,7 @@ function getTbSwDualAllCallPreset(): WingPreset {
 				down: [
 					{
 						actionId: TalkbackSwitcherActionId.AllCall,
-						options: { tb: 'AB', tb_use_variables: false },
+						options: { tb: 'AB', tb_use_variables: false, destgroup: 'all' },
 					},
 				],
 				up: [],
@@ -2727,7 +2727,7 @@ function getTbSwDualAllCallPreset(): WingPreset {
 		feedbacks: [
 			{
 				feedbackId: FeedbackId.TalkbackAllAssigned,
-				options: { tb: 'AB', tb_use_variables: false },
+				options: { tb: 'AB', tb_use_variables: false, destgroup: 'all' },
 				style: { bgcolor: combineRgb(220, 220, 220), color: combineRgb(0, 0, 0) },
 			},
 		],
