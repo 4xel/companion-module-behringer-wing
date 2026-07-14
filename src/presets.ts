@@ -2295,13 +2295,19 @@ function getRemasterSelectedPreset(delta: number): WingPreset {
 
 // ─── Talkback Switcher presets ────────────────────────────────────────────────
 
+/** Live name variable for a talkback destination, e.g. "/bus/6" -> "$(wing:bus6_name)". */
+function destNameVariable(dest: string): string {
+	const [, base, num] = dest.split('/')
+	return `$(wing:${base}${num}_name)`
+}
+
 function getTbSwExclusivePreset(tb: 'A' | 'B', dest: string, name: string, activeBg: number): WingPreset {
 	return {
 		name: `TB ${tb} → ${name}`,
 		category: 'Talkback Switcher',
 		type: 'simple',
 		style: {
-			text: `${tb}:${name}`,
+			text: `${tb}:${destNameVariable(dest)}`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(30, 30, 30),
@@ -2346,7 +2352,7 @@ function getTbSwAdditivePreset(tb: 'A' | 'B', dest: string, name: string, active
 		category: 'Talkback Switcher',
 		type: 'simple',
 		style: {
-			text: `${tb}+${name}`,
+			text: `${tb}+${destNameVariable(dest)}`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(30, 30, 30),
