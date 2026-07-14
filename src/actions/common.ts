@@ -70,6 +70,7 @@ export enum CommonActions {
 	SetIcon = 'set-icon',
 	SetSolo = 'set-solo',
 	ClearSolo = 'clear-solo',
+	SetSoloMode = 'set-solo-mode',
 
 	// Gain
 	SetGain = 'set-gain',
@@ -723,7 +724,27 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): WingActi
 				const sel = ActionUtil.getStringWithVariables(event, 'sel')
 				const solo = ActionUtil.getNumberWithVariables(event, 'solo')
 				const cmd = ActionUtil.getSoloCommand(sel, ActionUtil.getNodeNumberFromID(sel))
-				await send(cmd, solo)
+
+				if (self.soloExclusive) {
+					// Individual/exclusive mode: if this press turns solo on, clear all other solos first.
+					const willBeOn = solo === 1 || (solo === -1 && (StateUtil.getNumberFromState(cmd, state) ?? 0) !== 1)
+					if (willBeOn) {
+						for (const strip of [...allChannels, ...state.namedChoices.dcas]) {
+							const stripId = strip.id as string
+							const stripCmd = ActionUtil.getSoloCommand(stripId, ActionUtil.getNodeNumberFromID(stripId))
+							if (stripCmd !== cmd) await send(stripCmd, 0)
+						}
+					}
+					await send(cmd, willBeOn ? 1 : 0)
+				} else {
+					await send(cmd, solo)
+				}
+
+				// /$stat/solo is not pushed for OSC-initiated solo changes, so re-query it so the
+				// "Any Solo Active" feedback (e.g. on the Clear Solo button) refreshes.
+				setTimeout(() => {
+					self.connection?.sendCommand('/$stat/solo').catch(() => {})
+				}, 200)
 			},
 		},
 		[CommonActions.ClearSolo]: {
@@ -744,6 +765,35 @@ export function createCommonActions(self: InstanceBaseExt<WingConfig>): WingActi
 						await send(cmd, 0)
 					}
 				}
+
+				// /$stat/solo is not pushed for OSC-initiated changes; re-query so the feedback refreshes.
+				setTimeout(() => {
+					self.connection?.sendCommand('/$stat/solo').catch(() => {})
+				}, 200)
+			},
+		},
+		[CommonActions.SetSoloMode]: {
+			name: 'Set Solo Mode (Companion)',
+			description:
+				'Switch how the Set Solo action behaves in Companion: Additive lets multiple strips be soloed at once; Individual clears other solos when you solo a strip. This is a Companion-side setting, not a console setting.',
+			options: [
+				{
+					type: 'dropdown',
+					id: 'mode',
+					label: 'Mode',
+					default: 'toggle',
+					choices: [
+						getIdLabelPair('additive', 'Additive'),
+						getIdLabelPair('individual', 'Individual'),
+						getIdLabelPair('toggle', 'Toggle'),
+					],
+				},
+			],
+			callback: (event) => {
+				const mode = event.options.mode as string
+				self.soloExclusive = mode === 'toggle' ? !self.soloExclusive : mode === 'individual'
+				// 'solo-mode-exclusive' — kept as a literal to avoid importing FeedbackId here.
+				self.checkFeedbacks('solo-mode-exclusive')
 			},
 		},
 		////////////////////////////////////////////////////////////////

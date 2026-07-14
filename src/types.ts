@@ -24,6 +24,13 @@ export interface InstanceBaseExt<TConfig extends JsonObject> extends InstanceBas
 	model: ModelSpec
 	logger?: ModuleLogger
 
+	/**
+	 * Companion-side solo mode. When true, the Set Solo action clears all other solos before
+	 * soloing the selected strip (individual/exclusive); when false it just toggles (additive).
+	 * This is a module runtime setting, not a Wing console setting.
+	 */
+	soloExclusive: boolean
+
 	connection?: import('./handlers/connection-handler.js').ConnectionHandler | undefined
 	stateHandler?: import('./handlers/state-handler.js').StateHandler | undefined
 	feedbackHandler?: import('./handlers/feedback-handler.js').FeedbackHandler | undefined

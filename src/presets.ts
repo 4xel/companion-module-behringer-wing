@@ -2,17 +2,21 @@ import {
 	combineRgb,
 	CompanionPresetDefinitions,
 	CompanionSimplePresetDefinition,
+	CompanionLayeredButtonPresetDefinition,
 	CompanionPresetSection,
+	SomeButtonGraphicsElement,
 } from '@companion-module/base'
 import { InstanceBaseExt, WingSchema } from './types.js'
 import { WingConfig } from './config.js'
 
 /**
- * A Companion base v2 "simple" preset, extended with the module-local `category` used
- * to build the preset section structure. `category` is stripped by Companion at runtime;
- * {@link buildPresetStructure} reads it to group presets into sections.
+ * A Companion base v2 preset (simple or layered), extended with the module-local `category`
+ * used to build the preset section structure. `category` is stripped before the definitions
+ * are handed to Companion; {@link buildPresetStructure} reads it to group presets into sections.
  */
-type WingPreset = CompanionSimplePresetDefinition<WingSchema> & { category: string }
+type WingPreset = (CompanionSimplePresetDefinition<WingSchema> | CompanionLayeredButtonPresetDefinition<WingSchema>) & {
+	category: string
+}
 
 /**
  * Group presets into sections by their `category`. Base v2 moved preset grouping out of
@@ -204,6 +208,7 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): {
 	presets['stat-aes50-b'] = getAes50StatusPreset('B')
 	presets['stat-aes50-c'] = getAes50StatusPreset('C')
 	presets['stat-solo-clear'] = getSoloClearPreset()
+	presets['solo-mode-toggle'] = getSoloModePreset()
 	presets['solo-mon-spk'] = getSoloMonitorPreset('SPK', 'Speaker')
 	presets['solo-mon-ph'] = getSoloMonitorPreset('PH', 'Phones')
 	presets['solo-mon-both'] = getSoloMonitorPreset('PH+SPK', 'Both')
@@ -436,13 +441,8 @@ function getMutePreset(base: string, val: number): WingPreset {
 	return {
 		name: 'Mute Button',
 		category: 'Mute',
-		type: 'simple',
-		style: {
-			text: `Mute\n$(wing:${base}${val}_name)`,
-			size: 'auto',
-			color: combineRgb(255, 255, 255),
-			bgcolor: combineRgb(0, 0, 0),
-		},
+		type: 'layered',
+		elements: buildStripElements(base, val, 'Mute'),
 		options: {
 			stepAutoProgress: true,
 		},
@@ -461,35 +461,139 @@ function getMutePreset(base: string, val: number): WingPreset {
 			{
 				feedbackId: FeedbackId.Mute,
 				options: { sel: path, mute: 1 },
-				style: {
-					color: combineRgb(255, 255, 255),
-					bgcolor: combineRgb(255, 0, 0),
-				},
+				isInverted: false,
+				styleOverrides: [
+					colorOverride('text0', combineRgb(255, 255, 255)),
+					colorOverride('box0', combineRgb(255, 0, 0)),
+				],
 			},
 		],
 	}
 }
 
-// A 72x72 transparent PNG with a solid blue border ring, overlaid on bus solo
-// presets so they read as visually distinct from channel solo presets. Simple
-// presets have no native border property, so this is drawn via png64.
-const BUS_BORDER_PNG =
-	'iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAYAAABV7bNHAAAAe0lEQVR42u3QMQ0AAAjAMBTj/wMHvJDQJTPQiKzyMARAgACdA/oaIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAO0CGRAgQIBO3LwcrgXkJqdsAAAAAElFTkSuQmCC'
+// Border colour per strip type, used to visually distinguish non-channel solo presets.
+// Channel solo has no border. Bus is green to match the reference layout.
+const STRIP_BORDER_COLORS: Record<string, number> = {
+	aux: combineRgb(0, 200, 255), // cyan
+	bus: combineRgb(64, 255, 64), // green
+	mtx: combineRgb(180, 90, 255), // violet
+	main: combineRgb(255, 140, 0), // orange
+	dca: combineRgb(255, 70, 70), // red
+}
+
+// Human-readable strip label used as a fallback when a strip has no name set,
+// e.g. "Bus 11" or "Main 2".
+const STRIP_FALLBACK_LABEL: Record<string, string> = {
+	ch: 'Ch',
+	aux: 'Aux',
+	bus: 'Bus',
+	mtx: 'Mtx',
+	main: 'Main',
+	dca: 'DCA',
+}
+
+// Companion expression fragment yielding the strip name, or `fallback` when the name is empty
+// OR unset. `concat('', var)` coerces an unset variable (one the console never sent a value for)
+// to '' so the fallback fires — a bare `var == ''` is false for unset variables.
+function nameOrFallbackExpr(nameVar: string, fallback: string): string {
+	return `concat('', ${nameVar}) == '' ? '${fallback}' : ${nameVar}`
+}
+
+// A border drawn as a group of four line elements around the button edge, matching the
+// Companion 5 layered-button approach (simple presets have no border property).
+function stripBorderGroup(color: number): SomeButtonGraphicsElement {
+	const line = (fromX: number, fromY: number, toX: number, toY: number): SomeButtonGraphicsElement => ({
+		type: 'line',
+		name: 'Line',
+		opacity: 100,
+		fromX,
+		fromY,
+		toX,
+		toY,
+		borderWidth: 4,
+		borderColor: color,
+		borderPosition: 'center',
+	})
+	return {
+		id: 'border',
+		name: 'Border',
+		type: 'group',
+		opacity: 100,
+		x: 0,
+		y: 0,
+		width: 100,
+		height: 100,
+		squareCoords: false,
+		children: [
+			line(100, 100, 0, 100), // bottom
+			line(100, 100, 100, 0), // right
+			line(0, 0, 100, 0), // top
+			line(0, 0, 0, 100), // left
+		],
+	}
+}
+
+// Build the layered elements for a strip toggle button (solo/mute): a black background, a
+// text layer showing the live strip name (falling back to e.g. "Bus 11" when unnamed), and a
+// per-strip-type coloured border for non-channel strips.
+function buildStripElements(base: string, val: number, label: string): SomeButtonGraphicsElement[] {
+	const borderColor = STRIP_BORDER_COLORS[base]
+	const fallbackLabel = `${STRIP_FALLBACK_LABEL[base] ?? base} ${val}`
+	const nameVar = `$(wing:${base}${val}_name)`
+	const elements: SomeButtonGraphicsElement[] = [
+		{
+			id: 'box0',
+			name: 'Background',
+			type: 'box',
+			opacity: 100,
+			x: 0,
+			y: 0,
+			width: 100,
+			height: 100,
+			color: combineRgb(0, 0, 0),
+			borderWidth: 0,
+		},
+		{
+			id: 'text0',
+			name: 'Text',
+			type: 'text',
+			opacity: 100,
+			x: 0,
+			y: 0,
+			width: 100,
+			height: 100,
+			// Show the live strip name, or fall back to e.g. "Bus 11" when it has no name.
+			text: {
+				isExpression: true,
+				value: `concat('${label}\\n', ${nameOrFallbackExpr(nameVar, fallbackLabel)})`,
+			},
+			color: combineRgb(255, 255, 255),
+			halign: 'center',
+			valign: 'center',
+			fontsize: 100,
+			fontsizeAllowShrink: true,
+			font: 'companion-sans',
+			outlineColor: 4278190080, // opaque black text outline (0xFF000000)
+		},
+	]
+	if (borderColor !== undefined) elements.push(stripBorderGroup(borderColor))
+	return elements
+}
+
+// A feedback style override for an element's colour. Companion applies style-override values
+// in the ExpressionOrValue wrapper form, so wrap the value explicitly.
+function colorOverride(elementId: string, value: number) {
+	return { elementId, elementProperty: 'color', override: { isExpression: false as const, value } }
+}
 
 function getSoloPreset(base: string, val: number): WingPreset {
 	const path = `/${base}/${val}`
-	const isBus = base === 'bus'
+
 	return {
 		name: `SoloButton`,
 		category: 'Solo',
-		type: 'simple',
-		style: {
-			text: `Solo\n$(wing:${base}${val}_name)`,
-			size: 'auto',
-			color: combineRgb(255, 255, 255),
-			bgcolor: combineRgb(0, 0, 0),
-			...(isBus ? { png64: BUS_BORDER_PNG, pngalignment: 'center:center' as const } : {}),
-		},
+		type: 'layered',
+		elements: buildStripElements(base, val, 'Solo'),
 		options: {
 			stepAutoProgress: true,
 		},
@@ -511,10 +615,74 @@ function getSoloPreset(base: string, val: number): WingPreset {
 			{
 				feedbackId: FeedbackId.Solo,
 				options: { sel: path, solo: '1' },
-				style: {
-					color: combineRgb(0, 0, 0),
-					bgcolor: combineRgb(255, 255, 0),
-				},
+				isInverted: false,
+				styleOverrides: [colorOverride('text0', combineRgb(0, 0, 0)), colorOverride('box0', combineRgb(255, 255, 0))],
+			},
+		],
+	}
+}
+
+// A Companion-side toggle between additive and individual (exclusive) solo behaviour for all
+// solo buttons. Shows the current mode and highlights green when Individual.
+function getSoloModePreset(): WingPreset {
+	return {
+		name: 'Solo Mode (Additive / Individual)',
+		category: 'Solo',
+		type: 'layered',
+		elements: [
+			{
+				id: 'box0',
+				name: 'Background',
+				type: 'box',
+				opacity: 100,
+				x: 0,
+				y: 0,
+				width: 100,
+				height: 100,
+				color: combineRgb(0, 0, 0),
+				borderWidth: 0,
+			},
+			{
+				id: 'text0',
+				name: 'Text',
+				type: 'text',
+				opacity: 100,
+				x: 0,
+				y: 0,
+				width: 100,
+				height: 100,
+				text: 'Solo Mode\nAdditive',
+				color: combineRgb(255, 255, 255),
+				halign: 'center',
+				valign: 'center',
+				fontsize: 100,
+				fontsizeAllowShrink: true,
+				font: 'companion-sans',
+				outlineColor: 4278190080,
+			},
+		],
+		options: {
+			stepAutoProgress: true,
+		},
+		steps: [
+			{
+				down: [{ actionId: CommonActions.SetSoloMode, options: { mode: 'toggle' } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.SoloModeExclusive,
+				options: {},
+				isInverted: false,
+				styleOverrides: [
+					{
+						elementId: 'text0',
+						elementProperty: 'text',
+						override: { isExpression: false as const, value: 'Solo Mode\nIndividual' },
+					},
+					colorOverride('box0', combineRgb(0, 150, 0)),
+				],
 			},
 		],
 	}
@@ -1525,12 +1693,10 @@ function getSofPresets(base: string, val: number): WingPreset {
 	return {
 		name: 'Sends on Fader',
 		category: 'Sends on Fader',
-		type: 'simple',
-		style: {
-			text: `SOF\n$(wing:${base}${val}_name)`,
-			size: 'auto',
-			color: combineRgb(255, 255, 255),
-			bgcolor: combineRgb(0, 0, 0),
+		type: 'layered',
+		elements: buildStripElements(base, val, 'SOF'),
+		options: {
+			stepAutoProgress: true,
 		},
 		steps: [
 			{
@@ -1552,9 +1718,8 @@ function getSofPresets(base: string, val: number): WingPreset {
 				options: {
 					channel: path,
 				},
-				style: {
-					bgcolor: combineRgb(255, 165, 0),
-				},
+				isInverted: false,
+				styleOverrides: [colorOverride('box0', combineRgb(255, 165, 0))],
 			},
 		],
 	}
@@ -1842,7 +2007,13 @@ function getSoloClearPreset(): WingPreset {
 			bgcolor: combineRgb(0, 0, 0),
 		},
 		steps: [{ down: [{ actionId: CommonActions.ClearSolo, options: {} }], up: [] }],
-		feedbacks: [],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.AnySoloActive,
+				options: {},
+				style: { bgcolor: combineRgb(255, 165, 0), color: combineRgb(0, 0, 0) },
+			},
+		],
 	}
 }
 
@@ -2296,9 +2467,13 @@ function getRemasterSelectedPreset(delta: number): WingPreset {
 // ─── Talkback Switcher presets ────────────────────────────────────────────────
 
 /** Live name variable for a talkback destination, e.g. "/bus/6" -> "$(wing:bus6_name)". */
-function destNameVariable(dest: string): string {
+// Expression text for a talkback destination button: prefix + live name, falling back to the
+// strip label + number (e.g. "Bus 6") when the destination has no name. Used with textExpression.
+function destLabelExpression(prefix: string, dest: string): string {
 	const [, base, num] = dest.split('/')
-	return `$(wing:${base}${num}_name)`
+	const nameVar = `$(wing:${base}${num}_name)`
+	const fallback = `${STRIP_FALLBACK_LABEL[base] ?? base} ${num}`
+	return `concat('${prefix}', ${nameOrFallbackExpr(nameVar, fallback)})`
 }
 
 function getTbSwExclusivePreset(tb: 'A' | 'B', dest: string, name: string, activeBg: number): WingPreset {
@@ -2307,7 +2482,8 @@ function getTbSwExclusivePreset(tb: 'A' | 'B', dest: string, name: string, activ
 		category: 'Talkback Switcher',
 		type: 'simple',
 		style: {
-			text: `${tb}:${destNameVariable(dest)}`,
+			text: destLabelExpression(`${tb}:`, dest),
+			textExpression: true,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(30, 30, 30),
@@ -2352,7 +2528,8 @@ function getTbSwAdditivePreset(tb: 'A' | 'B', dest: string, name: string, active
 		category: 'Talkback Switcher',
 		type: 'simple',
 		style: {
-			text: `${tb}+${destNameVariable(dest)}`,
+			text: destLabelExpression(`${tb}+`, dest),
+			textExpression: true,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(30, 30, 30),

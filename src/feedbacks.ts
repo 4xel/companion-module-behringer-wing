@@ -94,6 +94,8 @@ export enum FeedbackId {
 	WLivePlaybackState = 'wlive-playback-state',
 	GpioState = 'gpio-state',
 	Solo = 'solo',
+	SoloModeExclusive = 'solo-mode-exclusive',
+	AnySoloActive = 'any-solo-active',
 	SoloDim = 'solo-dim',
 	SoloMono = 'solo-mono',
 	SoloLRSwap = 'solo-lr-swap',
@@ -630,6 +632,36 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 			unsubscribe: (event: CompanionFeedbackInfo): void => {
 				const cmd = ConfigurationCommands.SoloMono()
 				unsubscribeFeedback(subs, cmd, event)
+			},
+		},
+		[FeedbackId.SoloModeExclusive]: {
+			type: 'boolean',
+			name: 'Solo Mode: Individual (Companion)',
+			description:
+				'Active when the Companion-side solo mode is Individual (exclusive), off when Additive. This is a module setting, not a console setting.',
+			options: [],
+			defaultStyle: { bgcolor: combineRgb(0, 200, 0), color: combineRgb(0, 0, 0) },
+			callback: (): boolean => _self.soloExclusive,
+			unsubscribe: (): void => {},
+		},
+		[FeedbackId.AnySoloActive]: {
+			type: 'boolean',
+			name: 'Any Solo Active',
+			description: 'Active when any strip is soloed (the console solo indicator).',
+			options: [],
+			defaultStyle: { bgcolor: combineRgb(255, 165, 0), color: combineRgb(0, 0, 0) },
+			callback: (): boolean => {
+				// /$stat/solo may report as a number (1/0) or a string; treat any truthy value as active.
+				const num = StateUtil.getNumberFromState(StatusCommands.Solo(), state)
+				if (typeof num === 'number') return num !== 0
+				const str = StateUtil.getStringFromState(StatusCommands.Solo(), state)
+				return str !== undefined && str !== '' && str !== '0' && str.toLowerCase() !== 'off'
+			},
+			subscribe: (event): void => {
+				subscribeFeedback(ensureLoaded, subs, StatusCommands.Solo(), event)
+			},
+			unsubscribe: (event: CompanionFeedbackInfo): void => {
+				unsubscribeFeedback(subs, StatusCommands.Solo(), event)
 			},
 		},
 		[FeedbackId.SoloLRSwap]: {

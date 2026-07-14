@@ -35,6 +35,9 @@ export default class WingInstance extends InstanceBase<WingSchema> implements In
 	config!: WingConfig
 	model: ModelSpec
 
+	/** Companion-side solo mode: false = additive, true = individual/exclusive. */
+	soloExclusive: boolean = false
+
 	connected: boolean = false
 	private wlivePoller?: NodeJS.Timeout
 
