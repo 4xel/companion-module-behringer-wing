@@ -298,7 +298,18 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): {
 	presets[`lights-bright`] = getLightPresetBright()
 	presets[`lights-dark`] = getLightPresetDark()
 
-	return { structure: buildPresetStructure(presets), presets: presets }
+	const structure = buildPresetStructure(presets)
+
+	// Strip the module-only `category` field — it is used to build the section structure
+	// above and is not part of the Companion base v2 preset shape.
+	const cleaned: CompanionPresetDefinitions<WingSchema> = {}
+	for (const [id, preset] of Object.entries(presets)) {
+		if (!preset) continue
+		const { category: _category, ...definition } = preset
+		cleaned[id] = definition
+	}
+
+	return { structure, presets: cleaned }
 }
 
 function getGlobalMainAltPreset(source: 0 | 1, label: string): WingPreset {
@@ -422,14 +433,12 @@ function getColourMutePreset(base: string, num: number): WingPreset {
 
 function getMutePreset(base: string, val: number): WingPreset {
 	const path = `/${base}/${val}`
-	const name = `${base.toUpperCase()}${val}`
 	return {
 		name: 'Mute Button',
 		category: 'Mute',
 		type: 'simple',
 		style: {
-			text: `let name = 'Mute'const realName = $(wing:${base}${val}_name)let hasNoName = realName === '' || return hasNoName ? 'Mute ${name}' : \`Mute \${realName}\``,
-			textExpression: true,
+			text: `Mute\n$(wing:${base}${val}_name)`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(0, 0, 0),
@@ -463,14 +472,12 @@ function getMutePreset(base: string, val: number): WingPreset {
 
 function getSoloPreset(base: string, val: number): WingPreset {
 	const path = `/${base}/${val}`
-	const name = `${base.toUpperCase()}${val}`
 	return {
 		name: `SoloButton`,
 		category: 'Solo',
 		type: 'simple',
 		style: {
-			text: `let name = 'Solo'const realName = $(wing:${base}${val}_name)let hasNoName = realName === '' || return hasNoName ? 'Solo ${name}' : \`Solo \${realName}\``,
-			textExpression: true,
+			text: `Solo\n$(wing:${base}${val}_name)`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(0, 0, 0),
@@ -507,14 +514,12 @@ function getSoloPreset(base: string, val: number): WingPreset {
 
 function getBoostAndCenterPreset(base: string, val: number): WingPreset {
 	const path = `/${base}/${val}`
-	const name = `${base.toUpperCase()}${val}`
 	return {
 		name: 'Boost and Center Button',
 		category: 'Boost',
 		type: 'simple',
 		style: {
-			text: `let name = 'Boost & Center'const realName = $(wing:${base}${val}_name)let hasNoName = realName === '' || return hasNoName ? 'Boost & Center ${name}' : \`Boost & Center \${realName}\``,
-			textExpression: true,
+			text: `Boost & Center\n$(wing:${base}${val}_name)`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(0, 0, 0),
@@ -1007,8 +1012,7 @@ function getFxBypassPreset(slot: number): WingPreset {
 		category: 'FX',
 		type: 'simple',
 		style: {
-			text: `let m = $(wing:fx${slot}_model)\nreturn m && m !== 'NONE' ? \`FX${slot}\\n\${m}\` : \`FX ${slot}\``,
-			textExpression: true,
+			text: `FX${slot}\n$(wing:fx${slot}_model)`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(0, 0, 0),
@@ -1510,14 +1514,12 @@ function getFxDelayParamKnobPreset(
 
 function getSofPresets(base: string, val: number): WingPreset {
 	const path = `/${base}/${val}`
-	const name = `${base.toUpperCase()}${val}`
 	return {
 		name: 'Sends on Fader',
 		category: 'Sends on Fader',
 		type: 'simple',
 		style: {
-			text: `let name = 'SOF'const realName = $(wing:${base}${val}_name)let hasNoName = realName === '' || isreturn hasNoName ? 'SOF ${name}' : \`SOF \${realName}\``,
-			textExpression: true,
+			text: `SOF\n$(wing:${base}${val}_name)`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(0, 0, 0),
