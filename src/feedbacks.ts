@@ -102,6 +102,7 @@ export enum FeedbackId {
 	SoloMonitor = 'solo-monitor',
 	Talkback = 'talkback',
 	TalkbackAssign = 'talkback-assign',
+	TalkbackAllAssigned = 'talkback-all-assigned',
 	InsertOn = 'insert-on',
 	MainAltSwitch = 'main-alt-switch',
 	ActiveScene = 'active-scene',
@@ -172,6 +173,27 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 		...state.namedChoices.matrices,
 	]
 	const mainSendDestinations = [...state.namedChoices.matrices]
+
+	// All talkback-assignable destinations (busses, matrices, mains) and a helper that resolves
+	// the assign commands a "Talkback - All Selected Destinations Assigned" feedback should check,
+	// honouring its talkback (A/B/both) and its selected destination subset.
+	const talkbackDestChoices = [
+		...state.namedChoices.busses,
+		...state.namedChoices.matrices,
+		...state.namedChoices.mains,
+	]
+	const talkbackAllAssignCommands = (event: CompanionFeedbackInfo): string[] => {
+		const tb = ActionUtil.getStringWithVariables(event, 'tb')
+		const talkbacks = tb === 'AB' ? ['A', 'B'] : [tb]
+		const selected = (event.options['dests'] as string[] | undefined) ?? talkbackDestChoices.map((d) => d.id as string)
+		const cmds: string[] = []
+		for (const tbk of talkbacks) {
+			for (const destId of selected) {
+				cmds.push(ActionUtil.getTalkbackAssignCommand(tbk, destId))
+			}
+		}
+		return cmds
+	}
 
 	const feedbacks: { [id in FeedbackId]: CompanionFeedbackWithCallback | undefined } = {
 		[FeedbackId.FxMuted]: {
@@ -772,6 +794,39 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 				const destination = ActionUtil.getStringWithVariables(event, 'dest')
 				const cmd = ActionUtil.getTalkbackAssignCommand(talkback, destination)
 				unsubscribeFeedback(subs, cmd, event)
+			},
+		},
+		[FeedbackId.TalkbackAllAssigned]: {
+			type: 'boolean',
+			name: 'Talkback - All Selected Destinations Assigned',
+			description:
+				'Active only when every selected destination is assigned for the chosen talkback. Leave the destination list at its default (all) for a global "All Call", or pick a subset (e.g. all ear busses) so the button lights only when that whole group is assigned.',
+			options: [
+				...GetDropdownWithVariables('Talkback', 'tb', [...getTalkbackOptions(), getIdLabelPair('AB', 'Both (A + B)')]),
+				{
+					type: 'multidropdown',
+					id: 'dests',
+					label: 'Destinations (all of these must be assigned)',
+					choices: talkbackDestChoices,
+					default: talkbackDestChoices.map((d) => d.id),
+					minSelection: 1,
+				},
+			],
+			defaultStyle: { bgcolor: combineRgb(220, 220, 220), color: combineRgb(0, 0, 0) },
+			callback: (event: CompanionFeedbackInfo): boolean => {
+				const cmds = talkbackAllAssignCommands(event)
+				if (cmds.length === 0) return false
+				return cmds.every((cmd) => StateUtil.getNumberFromState(cmd, state) === 1)
+			},
+			subscribe: (event): void => {
+				for (const cmd of talkbackAllAssignCommands(event)) {
+					subscribeFeedback(ensureLoaded, subs, cmd, event)
+				}
+			},
+			unsubscribe: (event: CompanionFeedbackInfo): void => {
+				for (const cmd of talkbackAllAssignCommands(event)) {
+					unsubscribeFeedback(subs, cmd, event)
+				}
 			},
 		},
 		[FeedbackId.InsertOn]: {

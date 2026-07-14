@@ -213,7 +213,12 @@ export default class WingInstance extends InstanceBase<WingSchema> implements In
 			this.feedbackHandler?.startPolling()
 			this.stateHandler?.state?.requestNames(this)
 			if (this.config.prefetchVariablesOnStartup) {
-				void this.stateHandler?.state?.requestAllVariables(this)
+				// Defer prefetch so its large query bursts don't flood the Wing while the paced
+				// name/state queries from requestNames are still in flight (which caused replies
+				// to be dropped and names to go missing).
+				setTimeout(() => {
+					void this.stateHandler?.state?.requestAllVariables(this)
+				}, 3000)
 			}
 			this.stateHandler?.requestUpdate()
 			this.startWlivePoller()

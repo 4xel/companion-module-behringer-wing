@@ -170,9 +170,9 @@ export class WingState implements IStoredChannelSubject {
 
 		this.namedChoices.busses = []
 		for (let bus = 1; bus <= model.busses; bus++) {
-			this.names.busses.push(this.getRealName(Commands.Bus.RealName(bus)) ?? `Bus ${bus}`)
+			this.names.busses.push(this.getRealName(Commands.Bus.Name(bus)) ?? `Bus ${bus}`)
 			this.namedChoices.busses.push(
-				this.getNameForChoice(bus, Commands.Bus.Node(bus), Commands.Bus.RealName(bus), 'Bus', 'B'),
+				this.getNameForChoice(bus, Commands.Bus.Node(bus), Commands.Bus.Name(bus), 'Bus', 'B'),
 			)
 		}
 
@@ -223,65 +223,63 @@ export class WingState implements IStoredChannelSubject {
 		self.logger?.info('Requesting all names...')
 		const sendCommand = self.connection!.sendCommand.bind(self.connection)
 
+		// Collect all startup queries and send them paced. Firing them in one burst overflows
+		// the Wing's OSC send buffer, which silently drops the later replies — that left every
+		// strip type after channels (aux/bus/mtx/main/dca) with no name. Pacing keeps every reply.
+		const paths: string[] = []
+		for (let ch = 1; ch <= model.channels; ch++) paths.push(Commands.Channel.RealName(ch))
+		for (let aux = 1; aux <= model.auxes; aux++) paths.push(Commands.Aux.RealName(aux))
+		for (let bus = 1; bus <= model.busses; bus++) paths.push(Commands.Bus.Name(bus))
+		for (let mtx = 1; mtx <= model.matrices; mtx++) paths.push(Commands.Matrix.RealName(mtx))
+		for (let main = 1; main <= model.mains; main++) paths.push(Commands.Main.RealName(main))
+		for (let dca = 1; dca <= model.dcas; dca++) paths.push(Commands.Dca.Name(dca))
+		for (let mgrp = 1; mgrp <= model.mutegroups; mgrp++) paths.push(Commands.MuteGroup.Name(mgrp))
+		for (let fx = 1; fx <= model.effects; fx++) paths.push(Commands.Effect.Model(fx))
+
+		// Global solo indicator (drives the "Any Solo Active" feedback / Clear Solo button).
+		paths.push('/$stat/solo')
+
+		// Key per-channel variables so they're live from startup without prefetch.
 		for (let ch = 1; ch <= model.channels; ch++) {
-			void sendCommand(Commands.Channel.RealName(ch))
+			paths.push(
+				Commands.Channel.InputGain(ch),
+				Commands.Channel.InputTrim(ch),
+				Commands.Channel.InputInvert(ch),
+				Commands.Channel.Width(ch),
+				Commands.Channel.Mute(ch),
+				Commands.Channel.Fader(ch),
+				Commands.Channel.Pan(ch),
+				Commands.Channel.Color(ch),
+				Commands.Channel.InputAltSource(ch),
+			)
 		}
 		for (let aux = 1; aux <= model.auxes; aux++) {
-			void sendCommand(Commands.Aux.RealName(aux))
+			paths.push(
+				Commands.Aux.InputGain(aux),
+				Commands.Aux.InputTrim(aux),
+				Commands.Aux.InputInvert(aux),
+				Commands.Aux.Width(aux),
+				Commands.Aux.Mute(aux),
+				Commands.Aux.Fader(aux),
+				Commands.Aux.Pan(aux),
+				Commands.Aux.InputAltSource(aux),
+			)
 		}
 		for (let bus = 1; bus <= model.busses; bus++) {
-			void sendCommand(Commands.Bus.RealName(bus))
-		}
-		for (let mtx = 1; mtx <= model.matrices; mtx++) {
-			void sendCommand(Commands.Matrix.RealName(mtx))
-		}
-		for (let main = 1; main <= model.mains; main++) {
-			void sendCommand(Commands.Main.RealName(main))
+			paths.push(Commands.Bus.Mute(bus), Commands.Bus.Fader(bus), Commands.Bus.Pan(bus))
 		}
 		for (let dca = 1; dca <= model.dcas; dca++) {
-			void sendCommand(Commands.Dca.Name(dca))
-		}
-		for (let mgrp = 1; mgrp <= model.mutegroups; mgrp++) {
-			void sendCommand(Commands.MuteGroup.Name(mgrp))
-		}
-		for (let fx = 1; fx <= model.effects; fx++) {
-			void sendCommand(Commands.Effect.Model(fx))
+			paths.push(Commands.Dca.Mute(dca), Commands.Dca.Fader(dca))
 		}
 
-		// Always query key per-channel variables so they're live from startup
-		// without requiring prefetchVariablesOnStartup to be enabled.
-		setTimeout(() => {
-			for (let ch = 1; ch <= model.channels; ch++) {
-				void sendCommand(Commands.Channel.InputGain(ch))
-				void sendCommand(Commands.Channel.InputTrim(ch))
-				void sendCommand(Commands.Channel.InputInvert(ch))
-				void sendCommand(Commands.Channel.Width(ch))
-				void sendCommand(Commands.Channel.Mute(ch))
-				void sendCommand(Commands.Channel.Fader(ch))
-				void sendCommand(Commands.Channel.Pan(ch))
-				void sendCommand(Commands.Channel.Color(ch))
-				void sendCommand(Commands.Channel.InputAltSource(ch))
-			}
-			for (let aux = 1; aux <= model.auxes; aux++) {
-				void sendCommand(Commands.Aux.InputGain(aux))
-				void sendCommand(Commands.Aux.InputTrim(aux))
-				void sendCommand(Commands.Aux.InputInvert(aux))
-				void sendCommand(Commands.Aux.Width(aux))
-				void sendCommand(Commands.Aux.Mute(aux))
-				void sendCommand(Commands.Aux.Fader(aux))
-				void sendCommand(Commands.Aux.Pan(aux))
-				void sendCommand(Commands.Aux.InputAltSource(aux))
-			}
-			for (let bus = 1; bus <= model.busses; bus++) {
-				void sendCommand(Commands.Bus.Mute(bus))
-				void sendCommand(Commands.Bus.Fader(bus))
-				void sendCommand(Commands.Bus.Pan(bus))
-			}
-			for (let dca = 1; dca <= model.dcas; dca++) {
-				void sendCommand(Commands.Dca.Mute(dca))
-				void sendCommand(Commands.Dca.Fader(dca))
-			}
-		}, 200) // slight delay so name queries don't compete on startup
+		let i = 0
+		const sendNext = (): void => {
+			if (i >= paths.length) return
+			void sendCommand(paths[i])
+			i++
+			setTimeout(sendNext, 5)
+		}
+		sendNext()
 	}
 
 	public async requestAllVariables(self: WingInstance): Promise<void> {

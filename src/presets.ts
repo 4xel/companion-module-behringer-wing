@@ -481,24 +481,6 @@ const STRIP_BORDER_COLORS: Record<string, number> = {
 	dca: combineRgb(255, 70, 70), // red
 }
 
-// Human-readable strip label used as a fallback when a strip has no name set,
-// e.g. "Bus 11" or "Main 2".
-const STRIP_FALLBACK_LABEL: Record<string, string> = {
-	ch: 'Ch',
-	aux: 'Aux',
-	bus: 'Bus',
-	mtx: 'Mtx',
-	main: 'Main',
-	dca: 'DCA',
-}
-
-// Companion expression fragment yielding the strip name, or `fallback` when the name is empty
-// OR unset. `concat('', var)` coerces an unset variable (one the console never sent a value for)
-// to '' so the fallback fires — a bare `var == ''` is false for unset variables.
-function nameOrFallbackExpr(nameVar: string, fallback: string): string {
-	return `concat('', ${nameVar}) == '' ? '${fallback}' : ${nameVar}`
-}
-
 // A border drawn as a group of four line elements around the button edge, matching the
 // Companion 5 layered-button approach (simple presets have no border property).
 function stripBorderGroup(color: number): SomeButtonGraphicsElement {
@@ -538,8 +520,6 @@ function stripBorderGroup(color: number): SomeButtonGraphicsElement {
 // per-strip-type coloured border for non-channel strips.
 function buildStripElements(base: string, val: number, label: string): SomeButtonGraphicsElement[] {
 	const borderColor = STRIP_BORDER_COLORS[base]
-	const fallbackLabel = `${STRIP_FALLBACK_LABEL[base] ?? base} ${val}`
-	const nameVar = `$(wing:${base}${val}_name)`
 	const elements: SomeButtonGraphicsElement[] = [
 		{
 			id: 'box0',
@@ -562,11 +542,9 @@ function buildStripElements(base: string, val: number, label: string): SomeButto
 			y: 0,
 			width: 100,
 			height: 100,
-			// Show the live strip name, or fall back to e.g. "Bus 11" when it has no name.
-			text: {
-				isExpression: true,
-				value: `concat('${label}\\n', ${nameOrFallbackExpr(nameVar, fallbackLabel)})`,
-			},
+			// Live strip name. Name variables are seeded with a default like "Bus 6" so they
+			// are never blank, which is why plain variable substitution is sufficient here.
+			text: `${label}\n$(wing:${base}${val}_name)`,
 			color: combineRgb(255, 255, 255),
 			halign: 'center',
 			valign: 'center',
@@ -2467,13 +2445,11 @@ function getRemasterSelectedPreset(delta: number): WingPreset {
 // ─── Talkback Switcher presets ────────────────────────────────────────────────
 
 /** Live name variable for a talkback destination, e.g. "/bus/6" -> "$(wing:bus6_name)". */
-// Expression text for a talkback destination button: prefix + live name, falling back to the
-// strip label + number (e.g. "Bus 6") when the destination has no name. Used with textExpression.
-function destLabelExpression(prefix: string, dest: string): string {
+// Button text for a talkback destination: prefix + the destination's live name. Name variables
+// are seeded with a default like "Bus 6", so plain variable substitution is never blank.
+function destLabelText(prefix: string, dest: string): string {
 	const [, base, num] = dest.split('/')
-	const nameVar = `$(wing:${base}${num}_name)`
-	const fallback = `${STRIP_FALLBACK_LABEL[base] ?? base} ${num}`
-	return `concat('${prefix}', ${nameOrFallbackExpr(nameVar, fallback)})`
+	return `${prefix}$(wing:${base}${num}_name)`
 }
 
 function getTbSwExclusivePreset(tb: 'A' | 'B', dest: string, name: string, activeBg: number): WingPreset {
@@ -2482,8 +2458,7 @@ function getTbSwExclusivePreset(tb: 'A' | 'B', dest: string, name: string, activ
 		category: 'Talkback Switcher',
 		type: 'simple',
 		style: {
-			text: destLabelExpression(`${tb}:`, dest),
-			textExpression: true,
+			text: destLabelText(`${tb}:`, dest),
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(30, 30, 30),
@@ -2528,8 +2503,7 @@ function getTbSwAdditivePreset(tb: 'A' | 'B', dest: string, name: string, active
 		category: 'Talkback Switcher',
 		type: 'simple',
 		style: {
-			text: destLabelExpression(`${tb}+`, dest),
-			textExpression: true,
+			text: destLabelText(`${tb}+`, dest),
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(30, 30, 30),
@@ -2586,8 +2560,8 @@ function getTbSwAllCallPreset(tb: 'A' | 'B'): WingPreset {
 		],
 		feedbacks: [
 			{
-				feedbackId: FeedbackId.Talkback,
-				options: { tb, on: '1', tb_use_variables: false, on_use_variables: false },
+				feedbackId: FeedbackId.TalkbackAllAssigned,
+				options: { tb, tb_use_variables: false },
 				style: { bgcolor: combineRgb(220, 220, 220), color: combineRgb(0, 0, 0) },
 			},
 		],
@@ -2752,8 +2726,8 @@ function getTbSwDualAllCallPreset(): WingPreset {
 		],
 		feedbacks: [
 			{
-				feedbackId: FeedbackId.Talkback,
-				options: { tb: 'A', on: '1', tb_use_variables: false, on_use_variables: false },
+				feedbackId: FeedbackId.TalkbackAllAssigned,
+				options: { tb: 'AB', tb_use_variables: false },
 				style: { bgcolor: combineRgb(220, 220, 220), color: combineRgb(0, 0, 0) },
 			},
 		],

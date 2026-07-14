@@ -56,6 +56,22 @@ export class VariableHandler extends EventEmitter {
 		)
 	}
 
+	// Default value for a strip name variable, e.g. "bus6_name" -> "Bus 6". Returns undefined
+	// for variables that are not strip names (so they are left unseeded).
+	private static readonly NAME_LABELS: Record<string, string> = {
+		ch: 'Ch',
+		aux: 'Aux',
+		bus: 'Bus',
+		mtx: 'Mtx',
+		main: 'Main',
+		dca: 'DCA',
+	}
+	private static defaultNameValue(variableId: string): string | undefined {
+		const m = variableId.match(/^(ch|aux|bus|mtx|main|dca)(\d+)_name$/)
+		if (!m) return undefined
+		return `${VariableHandler.NAME_LABELS[m[1]]} ${m[2]}`
+	}
+
 	setupVariables(): void {
 		this.logger?.info('Setting up variables')
 		const vars = getAllVariables(this.model)
@@ -74,6 +90,17 @@ export class VariableHandler extends EventEmitter {
 			definitions[v.variableId] = { name: v.name }
 		}
 		this.emit('create-variables', definitions)
+
+		// Seed strip name variables with a sensible default (e.g. "Bus 6") so they are never
+		// blank. Real names from the console overwrite these; empty names keep the default
+		// (see updateNameVariables). This makes name-based button text robust without relying
+		// on Companion expression fallbacks.
+		const seed: CompanionVariableValues = {}
+		for (const v of this.variables) {
+			const def = VariableHandler.defaultNameValue(v.variableId)
+			if (def !== undefined) seed[v.variableId] = def
+		}
+		if (Object.keys(seed).length > 0) this.emit('update-variables', seed)
 	}
 
 	updateVariables(): void {
@@ -128,6 +155,11 @@ export class VariableHandler extends EventEmitter {
 	private updateNameVariables(path: string, value: string): VariableUpdate[] | undefined {
 		const match = path.match(RE_NAME)
 		if (!match) {
+			return
+		}
+
+		// Keep the seeded default (e.g. "Bus 6") when the console reports an empty name.
+		if (value === undefined || value === null || String(value).trim() === '') {
 			return
 		}
 
