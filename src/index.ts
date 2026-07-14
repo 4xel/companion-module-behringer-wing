@@ -81,14 +81,16 @@ export default class WingInstance extends InstanceBase<WingSchema> implements In
 
 	/**
 	 * Rebuild and push all action, feedback and preset definitions, then re-check feedbacks.
-	 * Kept in one place so it isn't sent multiple times per update.
+	 * Each set is a large IPC payload, so they are staggered to avoid flooding the channel.
 	 */
 	private rebuildDefinitions(): void {
 		this.updateActions()
-		this.updateFeedbacks()
-		const presetsData = GetPresets(this)
-		this.setPresetDefinitions(presetsData.structure, presetsData.presets)
-		this.checkAllFeedbacks()
+		setTimeout(() => this.updateFeedbacks(), 200)
+		setTimeout(() => {
+			const presetsData = GetPresets(this)
+			this.setPresetDefinitions(presetsData.structure, presetsData.presets)
+		}, 400)
+		setTimeout(() => this.checkAllFeedbacks(), 600)
 	}
 
 	async init(config: WingConfig): Promise<void> {
@@ -117,10 +119,19 @@ export default class WingInstance extends InstanceBase<WingSchema> implements In
 		this.setupGainCompHandler()
 		this.transitions.setUpdateRate(config.fadeUpdateRate ?? 50)
 		this.setupOscForwarder()
-		// Defer the first definition push out of the synchronous init/start path so init()
-		// returns promptly (building + sending all definitions inline was overrunning
-		// Companion's init call timeout and forcing a restart).
-		setTimeout(() => this.rebuildDefinitions(), 0)
+		// Push all definitions AFTER init() has returned, staggered, so init resolves promptly
+		// and no single IPC burst (variables, actions, feedbacks, presets) overruns Companion's
+		// call timeout. Building + sending everything inline was forcing an init restart loop.
+		setTimeout(() => this.initializeDefinitions(), 800)
+	}
+
+	/**
+	 * One-time, staggered push of every definition set after init() has returned. Each set is a
+	 * large IPC payload, so they are spaced out to avoid flooding the channel and timing out.
+	 */
+	private initializeDefinitions(): void {
+		this.variableHandler?.setupVariables()
+		setTimeout(() => this.rebuildDefinitions(), 250)
 	}
 
 	private stop(): void {
@@ -337,8 +348,8 @@ export default class WingInstance extends InstanceBase<WingSchema> implements In
 		this.variableHandler.on('send', (cmd: string, arg?: number | string) => {
 			this.connection?.sendCommand(cmd, arg).catch(() => {})
 		})
-
-		this.variableHandler?.setupVariables()
+		// setupVariables() (which pushes ~1000 variable definitions over IPC) is deferred to
+		// initializeDefinitions() so it doesn't run inside init().
 	}
 
 	private setupOscForwarder(): void {
