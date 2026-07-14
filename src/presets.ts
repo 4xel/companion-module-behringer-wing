@@ -470,8 +470,15 @@ function getMutePreset(base: string, val: number): WingPreset {
 	}
 }
 
+// A 72x72 transparent PNG with a solid blue border ring, overlaid on bus solo
+// presets so they read as visually distinct from channel solo presets. Simple
+// presets have no native border property, so this is drawn via png64.
+const BUS_BORDER_PNG =
+	'iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAYAAABV7bNHAAAAe0lEQVR42u3QMQ0AAAjAMBTj/wMHvJDQJTPQiKzyMARAgACdA/oaIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAAECBAgQIECAAO0CGRAgQIBO3LwcrgXkJqdsAAAAAElFTkSuQmCC'
+
 function getSoloPreset(base: string, val: number): WingPreset {
 	const path = `/${base}/${val}`
+	const isBus = base === 'bus'
 	return {
 		name: `SoloButton`,
 		category: 'Solo',
@@ -481,6 +488,7 @@ function getSoloPreset(base: string, val: number): WingPreset {
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(0, 0, 0),
+			...(isBus ? { png64: BUS_BORDER_PNG, pngalignment: 'center:center' as const } : {}),
 		},
 		options: {
 			stepAutoProgress: true,
