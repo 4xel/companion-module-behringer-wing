@@ -1,4 +1,3 @@
-import { CompanionActionDefinitions } from '@companion-module/base'
 import {
 	GetFaderDeltaInputFieldWithVariables,
 	GetDropdownWithVariables,
@@ -6,7 +5,7 @@ import {
 	GetOnOffToggleDropdownWithVariables,
 	GetFaderInputFieldWithVariables,
 } from '../choices/common.js'
-import { CompanionActionWithCallback } from './common.js'
+import { CompanionActionWithCallback, WingActionDefinitions } from './common.js'
 import { MatrixCommands as Commands } from '../commands/matrix.js'
 import { InstanceBaseExt } from '../types.js'
 import { WingConfig } from '../config.js'
@@ -26,7 +25,7 @@ export enum MatrixActions {
 	MatrixDirectInStoreFader = 'matrix_direct_in_store_fader',
 }
 
-export function createMatrixActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
+export function createMatrixActions(self: InstanceBaseExt<WingConfig>): WingActionDefinitions {
 	const send = self.connection!.sendCommand.bind(self.connection)
 	const ensureLoaded = (path: string, arg?: string | number): void => {
 		self.connection?.sendCommand(path, arg).catch(() => {})

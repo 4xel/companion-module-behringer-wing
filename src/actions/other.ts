@@ -1,5 +1,5 @@
-import { CompanionActionDefinitions, Regex } from '@companion-module/base'
-import { CompanionActionWithCallback } from './common.js'
+import { Regex } from '@companion-module/base'
+import { CompanionActionWithCallback, WingActionDefinitions } from './common.js'
 import { InstanceBaseExt } from '../types.js'
 import { WingConfig } from '../config.js'
 import { GetTextFieldWithVariables } from '../choices/common.js'
@@ -11,7 +11,7 @@ export enum OtherActionId {
 	SendCommandWithString = 'send-command-with-string',
 }
 
-export function GetOtherActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
+export function GetOtherActions(self: InstanceBaseExt<WingConfig>): WingActionDefinitions {
 	const send = self.connection!.sendCommand.bind(self.connection)
 
 	const actions: { [id in OtherActionId]: CompanionActionWithCallback | undefined } = {

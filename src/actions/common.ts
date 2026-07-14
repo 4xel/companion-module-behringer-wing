@@ -1,9 +1,32 @@
-import { CompanionActionDefinition } from '@companion-module/base'
-import { SetRequired } from 'type-fest' // eslint-disable-line n/no-missing-import
+import type {
+	CompanionActionDefinitionBase,
+	CompanionActionDefinitionCallbackWithoutResult,
+	CompanionActionDefinitionSubscribeHooks,
+	CompanionOptionValues,
+} from '@companion-module/base'
 
-export type CompanionActionWithCallback = SetRequired<CompanionActionDefinition, 'callback'>
+/**
+ * Companion base v2 makes an action definition a discriminated union: providing a
+ * `subscribe` hook also *requires* `optionsToMonitorForSubscribe`. We relax that here
+ * so individual action definitions can keep authoring just `subscribe`; createActions()
+ * injects `optionsToMonitorForSubscribe` (monitoring all option ids, matching the v1
+ * "re-subscribe on any option change" behaviour) before handing them to Companion.
+ */
+export type CompanionActionWithCallback = CompanionActionDefinitionBase<CompanionOptionValues> &
+	CompanionActionDefinitionCallbackWithoutResult<CompanionOptionValues> & {
+		subscribe?: CompanionActionDefinitionSubscribeHooks['subscribe']
+		unsubscribe?: CompanionActionDefinitionSubscribeHooks['unsubscribe']
+		optionsToMonitorForSubscribe?: CompanionActionDefinitionSubscribeHooks['optionsToMonitorForSubscribe']
+		skipUnsubscribeOnOptionsChange?: CompanionActionDefinitionSubscribeHooks['skipUnsubscribeOnOptionsChange']
+	}
 
-import { CompanionActionDefinitions } from '@companion-module/base'
+/**
+ * The collection type returned by each `createXActions` builder. Uses the relaxed
+ * {@link CompanionActionWithCallback}; createActions() injects the required
+ * `optionsToMonitorForSubscribe` and casts to Companion's strict `CompanionActionDefinitions`.
+ */
+export type WingActionDefinitions = { [actionId: string]: CompanionActionWithCallback | undefined }
+
 import {
 	GetDropdown,
 	GetDropdownWithVariables,
@@ -141,7 +164,7 @@ export enum CommonActions {
 	CompensateQueueSlot = 'compensate-queue-slot',
 }
 
-export function createCommonActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
+export function createCommonActions(self: InstanceBaseExt<WingConfig>): WingActionDefinitions {
 	const send = self.connection!.sendCommand.bind(self.connection)
 	const ensureLoaded = (path: string, arg?: string | number): void => {
 		self.connection?.sendCommand(path, arg).catch(() => {})

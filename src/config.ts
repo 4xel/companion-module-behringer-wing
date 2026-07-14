@@ -13,7 +13,7 @@ export const DeskTypes = [
 	{ id: 'compact', label: 'Wing Compact' },
 	{ id: 'rack', label: 'Wing Rack' },
 ]
-export interface WingConfig {
+export type WingConfig = {
 	host?: string
 	model?: WingModel
 	fadeUpdateRate?: number

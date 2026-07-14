@@ -1,5 +1,5 @@
-import { CompanionActionDefinitions, SomeCompanionActionInputField } from '@companion-module/base'
-import { CompanionActionWithCallback } from './common.js'
+import { SomeCompanionActionInputField } from '@companion-module/base'
+import { CompanionActionWithCallback, WingActionDefinitions } from './common.js'
 import { InstanceBaseExt } from '../types.js'
 import { WingConfig } from '../config.js'
 import { GetDropdownWithVariables } from '../choices/common.js'
@@ -28,7 +28,7 @@ function getAllDestPaths(talkback: string, busses: number, matrices: number, mai
 	return paths
 }
 
-export function createTalkbackSwitcherActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
+export function createTalkbackSwitcherActions(self: InstanceBaseExt<WingConfig>): WingActionDefinitions {
 	const send = self.connection!.sendCommand.bind(self.connection)
 	if (!self.stateHandler?.state) throw new Error('State not available')
 	const state = self.stateHandler.state

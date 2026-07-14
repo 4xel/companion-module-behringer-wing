@@ -1,4 +1,9 @@
-import type { CompanionStaticUpgradeScript, CompanionStaticUpgradeResult } from '@companion-module/base'
+import type {
+	CompanionStaticUpgradeScript,
+	CompanionStaticUpgradeResult,
+	CompanionUpgradeContext,
+	CompanionStaticUpgradeProps,
+} from '@companion-module/base'
 import type { WingConfig } from './config.js'
 
 export const UpgradeScripts: CompanionStaticUpgradeScript<WingConfig>[] = [
@@ -7,7 +12,10 @@ export const UpgradeScripts: CompanionStaticUpgradeScript<WingConfig>[] = [
 	 * Remember that once it has been added it cannot be removed!
 	 */
 	// Upgrade RecorderState feedback from advanced to boolean (v2.2.0)
-	((_context, props): CompanionStaticUpgradeResult<WingConfig> => {
+	(
+		_context: CompanionUpgradeContext<WingConfig>,
+		props: CompanionStaticUpgradeProps<WingConfig, undefined>,
+	): CompanionStaticUpgradeResult<WingConfig, undefined> => {
 		const updatedFeedbacks = []
 
 		for (const feedback of props.feedbacks) {
@@ -15,9 +23,10 @@ export const UpgradeScripts: CompanionStaticUpgradeScript<WingConfig>[] = [
 				// Convert old advanced feedback with stateText option to new boolean feedback with state option
 				updatedFeedbacks.push({
 					...feedback,
-					// Remove old stateText option and add new state option defaulting to 'REC'
+					// Remove old stateText option and add new state option defaulting to 'REC'.
+					// Base v2 upgrade option values use the ExpressionOrValue shape.
 					options: {
-						state: 'REC',
+						state: { value: 'REC', isExpression: false },
 					},
 				})
 			}
@@ -43,11 +52,14 @@ export const UpgradeScripts: CompanionStaticUpgradeScript<WingConfig>[] = [
 			updatedActions: [],
 			updatedFeedbacks,
 		}
-	}) as CompanionStaticUpgradeScript<WingConfig>,
+	},
 
 	// Reset subscriptionInterval from 9000ms to 500ms.
 	// The old default was 9000ms which lets other OSC apps steal /*S for up to 9s.
-	((_context, props): CompanionStaticUpgradeResult<WingConfig> => {
+	(
+		_context: CompanionUpgradeContext<WingConfig>,
+		props: CompanionStaticUpgradeProps<WingConfig, undefined>,
+	): CompanionStaticUpgradeResult<WingConfig, undefined> => {
 		return {
 			updatedConfig: {
 				...props.config,
@@ -59,5 +71,5 @@ export const UpgradeScripts: CompanionStaticUpgradeScript<WingConfig>[] = [
 			updatedActions: [],
 			updatedFeedbacks: [],
 		}
-	}) as CompanionStaticUpgradeScript<WingConfig>,
+	},
 ]

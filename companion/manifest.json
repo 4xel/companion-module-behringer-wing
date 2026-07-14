@@ -1,4 +1,5 @@
 {
+	"type": "connection",
 	"id": "behringer-wing",
 	"name": "behringer-wing",
 	"shortname": "wing",

@@ -13,7 +13,7 @@ import { MuteGroupCommands } from '../commands/mutegroup.js'
 import { ConfigurationCommands } from '../commands/config.js'
 
 export function getNodeNumber(action: CompanionActionInfo | CompanionFeedbackInfo, id: string): number {
-	return action.options[id]?.toString().split('/')[2] as unknown as number
+	return (action.options[id] as string | number | undefined)?.toString().split('/')[2] as unknown as number
 }
 
 export function getNodeNumberFromID(id: string): number {
@@ -125,8 +125,8 @@ export function GetSendSourceDestinationFieldsWithVariables(event: CompanionActi
 	dest: string
 } {
 	const useVariables = event.options.send_src_dest_use_variables as boolean
-	let src = ''
-	let dest = ''
+	let src: string
+	let dest: string
 	if (useVariables === true) {
 		src = event.options.send_src_variables as string
 		dest = event.options.send_dest_variables as string
@@ -154,7 +154,7 @@ export function runTransition(
 	const target = targetValue ?? getNumber(action, valueId)
 	transitions.run(
 		cmd,
-		current as number,
+		current,
 		target,
 		getNumber(action, 'fadeDuration'),
 		getAlgorithm(action, 'fadeAlgorithm'),

@@ -34,5 +34,16 @@ export function createActions(self: InstanceBaseExt<WingConfig>): CompanionActio
 		...createTalkbackSwitcherActions(self),
 	}
 
-	return actions
+	// Companion base v2 requires `optionsToMonitorForSubscribe` on any action that
+	// defines a `subscribe` hook. Default it to all of the action's option ids, which
+	// reproduces the v1 behaviour of re-running subscribe/unsubscribe on any option change.
+	for (const action of Object.values(actions)) {
+		const entry = action as
+			{ subscribe?: unknown; optionsToMonitorForSubscribe?: string[]; options?: { id: string }[] } | undefined
+		if (entry && typeof entry.subscribe === 'function' && !entry.optionsToMonitorForSubscribe) {
+			entry.optionsToMonitorForSubscribe = (entry.options ?? []).map((option) => option.id)
+		}
+	}
+
+	return actions as CompanionActionDefinitions
 }

@@ -1,5 +1,4 @@
-import { CompanionActionDefinitions } from '@companion-module/base'
-import { CompanionActionWithCallback } from './common.js'
+import { CompanionActionWithCallback, WingActionDefinitions } from './common.js'
 import { InstanceBaseExt } from '../types.js'
 import { WingConfig } from '../config.js'
 import { GetDropdownWithVariables, GetNumberFieldWithVariables } from '../choices/common.js'
@@ -20,7 +19,7 @@ const FADER_MAX = 10
 // OSC -oo is stored as -140; skip sends at or below this to avoid un-silencing muted sends
 const FADER_SILENCE = -130
 
-export function createBusActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
+export function createBusActions(self: InstanceBaseExt<WingConfig>): WingActionDefinitions {
 	const state = self.stateHandler?.state
 	if (!state) throw new Error('State handler or state is not available')
 	const model = self.model

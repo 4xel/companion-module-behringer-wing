@@ -1,7 +1,7 @@
 import EventEmitter from 'events'
 import { ModelSpec } from '../models/types.js'
 import osc, { OscMessage } from 'osc'
-import { CompanionVariableDefinition, CompanionVariableValues, OSCMetaArgument } from '@companion-module/base'
+import { CompanionVariableDefinitions, CompanionVariableValues, OSCMetaArgument } from '@companion-module/base'
 import * as ActionUtil from '../actions/utils.js'
 import { IoCommands } from '../commands/io.js'
 import debounceFn from 'debounce-fn'
@@ -36,7 +36,7 @@ export class VariableHandler extends EventEmitter {
 	private readonly debounceUpdateVariables: () => void
 	private logger: ModuleLogger | undefined
 
-	private variables: CompanionVariableDefinition[] = []
+	private variables: { variableId: string; name: string }[] = []
 
 	constructor(model: ModelSpec, updateRate?: number, logger?: ModuleLogger) {
 		super()
@@ -67,7 +67,13 @@ export class VariableHandler extends EventEmitter {
 		this.variables.push(...vars.map((v) => ({ variableId: v.variableId, name: v.name })))
 
 		this.logger?.info(`Defined ${this.variables.length} variables`)
-		this.emit('create-variables', this.variables)
+
+		// Companion base v2 expects an object keyed by variableId, not an array
+		const definitions: CompanionVariableDefinitions = {}
+		for (const v of this.variables) {
+			definitions[v.variableId] = { name: v.name }
+		}
+		this.emit('create-variables', definitions)
 	}
 
 	updateVariables(): void {
@@ -199,7 +205,7 @@ export class VariableHandler extends EventEmitter {
 				destination = destination.replace(/^sendMX(\d+)$/, 'mtx$1')
 			}
 		}
-		let varName: string | null = null
+		let varName: string
 		if (destination) {
 			varName = `${source}_${destination}_level`
 		} else {
@@ -234,7 +240,7 @@ export class VariableHandler extends EventEmitter {
 			}
 		}
 
-		let varName = null
+		let varName: string
 		if (destination) {
 			varName = `${source}_${destination}_pan`
 		} else {
@@ -469,7 +475,7 @@ export class VariableHandler extends EventEmitter {
 		}
 
 		const talkback = match[1].toLowerCase()
-		let destination = ''
+		let destination: string
 		if (match[2] == 'B') {
 			destination = 'bus'
 		} else if (match[2] == 'MX') {

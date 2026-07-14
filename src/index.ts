@@ -1,12 +1,11 @@
 import {
 	InstanceBase,
-	runEntrypoint,
 	InstanceStatus,
 	SomeCompanionConfigField,
 	Regex,
 	CompanionVariableValues,
 } from '@companion-module/base'
-import { InstanceBaseExt } from './types.js'
+import { InstanceBaseExt, WingSchema } from './types.js'
 import { GetConfigFields, WingConfig } from './config.js'
 import { UpgradeScripts } from './upgrades.js'
 import { createActions } from './actions/index.js'
@@ -27,7 +26,9 @@ import { ModuleLogger } from './handlers/logger.js'
 import { CardsCommands } from './commands/cards.js'
 import { GainCompensationHandler, GAIN_QUEUE_SLOTS } from './handlers/gain-compensation-handler.js'
 
-export class WingInstance extends InstanceBase<WingConfig> implements InstanceBaseExt<WingConfig> {
+export { UpgradeScripts }
+
+export default class WingInstance extends InstanceBase<WingSchema> implements InstanceBaseExt<WingConfig> {
 	private readonly debounceHandleMessages: () => void
 	private readonly messages = new Set<OscMessage>()
 
@@ -119,7 +120,7 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 			this.stateHandler?.ensureLoaded(path)
 		})
 		this.gainCompHandler.on('check-feedbacks', (ids: string[]) => {
-			this.checkFeedbacks(...ids)
+			if (ids.length > 0) this.checkFeedbacks(...(ids as [string, ...string[]]))
 		})
 		this.gainCompHandler.on('queue-changed', (queue: number[]) => {
 			const vars: CompanionVariableValues = {}
@@ -266,10 +267,11 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 		this.stateHandler.on('update', () => {
 			this.updateActions()
 			this.updateFeedbacks()
-			this.setPresetDefinitions(GetPresets(this))
+			const presetsData = GetPresets(this)
+			this.setPresetDefinitions(presetsData.structure, presetsData.presets)
 			this.setActionDefinitions(createActions(this))
 			this.setFeedbackDefinitions(GetFeedbacksList(this))
-			this.checkFeedbacks()
+			this.checkAllFeedbacks()
 		})
 	}
 
@@ -278,7 +280,7 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 		this.feedbackHandler.setPollInterval(this.config.statusPollUpdateRate ?? 3000)
 
 		this.feedbackHandler.on('check-feedbacks', (feedbacks: string[]) => {
-			this.checkFeedbacks(...feedbacks)
+			if (feedbacks.length > 0) this.checkFeedbacks(...(feedbacks as [string, ...string[]]))
 		})
 
 		this.feedbackHandler.on('poll-request', (paths: string[]) => {
@@ -323,5 +325,3 @@ export class WingInstance extends InstanceBase<WingConfig> implements InstanceBa
 		)
 	}
 }
-
-runEntrypoint(WingInstance, UpgradeScripts)

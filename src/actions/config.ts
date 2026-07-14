@@ -1,9 +1,4 @@
-import { CompanionActionDefinition } from '@companion-module/base'
-import { SetRequired } from 'type-fest' // eslint-disable-line n/no-missing-import
-
-export type CompanionActionWithCallback = SetRequired<CompanionActionDefinition, 'callback'>
-
-import { CompanionActionDefinitions } from '@companion-module/base'
+import { CompanionActionWithCallback, WingActionDefinitions } from './common.js'
 import {
 	GetDropdownWithVariables,
 	GetFaderInputFieldWithVariables,
@@ -46,7 +41,7 @@ export enum ConfigActions {
 	TalkbackIndividualLevels = 'talkback-individual-levels',
 }
 
-export function createConfigurationActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
+export function createConfigurationActions(self: InstanceBaseExt<WingConfig>): WingActionDefinitions {
 	const send = self.connection!.sendCommand.bind(self.connection)
 	const state = self.stateHandler?.state
 	if (!state) throw new Error('State handler or state is not available')

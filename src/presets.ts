@@ -1,6 +1,37 @@
-import { combineRgb, CompanionPresetDefinitions, CompanionButtonPresetDefinition } from '@companion-module/base'
-import { InstanceBaseExt } from './types.js'
+import {
+	combineRgb,
+	CompanionPresetDefinitions,
+	CompanionSimplePresetDefinition,
+	CompanionPresetSection,
+} from '@companion-module/base'
+import { InstanceBaseExt, WingSchema } from './types.js'
 import { WingConfig } from './config.js'
+
+/**
+ * A Companion base v2 "simple" preset, extended with the module-local `category` used
+ * to build the preset section structure. `category` is stripped by Companion at runtime;
+ * {@link buildPresetStructure} reads it to group presets into sections.
+ */
+type WingPreset = CompanionSimplePresetDefinition<WingSchema> & { category: string }
+
+/**
+ * Group presets into sections by their `category`. Base v2 moved preset grouping out of
+ * the individual definitions and into the section structure passed to setPresetDefinitions.
+ */
+function buildPresetStructure(presets: { [id: string]: WingPreset | undefined }): CompanionPresetSection<WingSchema>[] {
+	const byCategory = new Map<string, string[]>()
+	for (const [id, preset] of Object.entries(presets)) {
+		if (!preset) continue
+		const ids = byCategory.get(preset.category) ?? []
+		ids.push(id)
+		byCategory.set(preset.category, ids)
+	}
+	return [...byCategory.entries()].map(([category, ids]) => ({
+		id: category.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+		name: category,
+		definitions: ids,
+	}))
+}
 import { CommonActions } from './actions/common.js'
 import { OtherActionId } from './actions/control.js'
 import { FeedbackId } from './feedbacks.js'
@@ -13,11 +44,14 @@ import { TalkbackSwitcherActionId } from './actions/talkback.js'
 import { GAIN_QUEUE_SLOTS } from './handlers/gain-compensation-handler.js'
 import { BusActions } from './actions/bus.js'
 
-export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPresetDefinitions {
+export function GetPresets(_instance: InstanceBaseExt<WingConfig>): {
+	structure: CompanionPresetSection<WingSchema>[]
+	presets: CompanionPresetDefinitions<WingSchema>
+} {
 	const model = _instance.model
 
 	const presets: {
-		[id: string]: CompanionButtonPresetDefinition | undefined
+		[id: string]: WingPreset | undefined
 	} = {}
 
 	presets['global-main-input'] = getGlobalMainAltPreset(0, 'MAIN')
@@ -264,15 +298,15 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 	presets[`lights-bright`] = getLightPresetBright()
 	presets[`lights-dark`] = getLightPresetDark()
 
-	return presets
+	return { structure: buildPresetStructure(presets), presets: presets }
 }
 
-function getGlobalMainAltPreset(source: 0 | 1, label: string): CompanionButtonPresetDefinition {
+function getGlobalMainAltPreset(source: 0 | 1, label: string): WingPreset {
 	const isAlt = source === 1
 	return {
 		name: `Global Input: ${label}`,
 		category: 'Input Switching',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `ALL\n${label}`,
 			size: 'auto',
@@ -295,11 +329,11 @@ function getGlobalMainAltPreset(source: 0 | 1, label: string): CompanionButtonPr
 	}
 }
 
-function getGlobalMainAltTogglePreset(): CompanionButtonPresetDefinition {
+function getGlobalMainAltTogglePreset(): WingPreset {
 	return {
 		name: 'Global Input: Toggle',
 		category: 'Input Switching',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `ALL\n$(wing:main_alt_status)`,
 			size: 'auto',
@@ -327,13 +361,13 @@ function getGlobalMainAltTogglePreset(): CompanionButtonPresetDefinition {
 	}
 }
 
-function getChannelAltSourcePreset(base: string, num: number): CompanionButtonPresetDefinition {
+function getChannelAltSourcePreset(base: string, num: number): WingPreset {
 	const path = `/${base}/${num}`
 	const name = `${base.toUpperCase()}${num}`
 	return {
 		name: `${name} Alt Source Toggle`,
 		category: 'Input Switching',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${name}\n$(wing:${base}${num}_alt)`,
 			size: 'auto',
@@ -356,13 +390,13 @@ function getChannelAltSourcePreset(base: string, num: number): CompanionButtonPr
 	}
 }
 
-function getColourMutePreset(base: string, num: number): CompanionButtonPresetDefinition {
+function getColourMutePreset(base: string, num: number): WingPreset {
 	const path = `/${base}/${num}`
 	const varName = `${base}${num}_name`
 	return {
 		name: `${base.toUpperCase()}${num} Colour Mute`,
 		category: 'Channel Strip',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `$(wing:${varName})`,
 			size: 'auto',
@@ -386,13 +420,13 @@ function getColourMutePreset(base: string, num: number): CompanionButtonPresetDe
 	}
 }
 
-function getMutePreset(base: string, val: number): CompanionButtonPresetDefinition {
+function getMutePreset(base: string, val: number): WingPreset {
 	const path = `/${base}/${val}`
 	const name = `${base.toUpperCase()}${val}`
 	return {
 		name: 'Mute Button',
 		category: 'Mute',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `let name = 'Mute'const realName = $(wing:${base}${val}_name)let hasNoName = realName === '' || return hasNoName ? 'Mute ${name}' : \`Mute \${realName}\``,
 			textExpression: true,
@@ -427,13 +461,13 @@ function getMutePreset(base: string, val: number): CompanionButtonPresetDefiniti
 	}
 }
 
-function getSoloPreset(base: string, val: number): CompanionButtonPresetDefinition {
+function getSoloPreset(base: string, val: number): WingPreset {
 	const path = `/${base}/${val}`
 	const name = `${base.toUpperCase()}${val}`
 	return {
 		name: `SoloButton`,
 		category: 'Solo',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `let name = 'Solo'const realName = $(wing:${base}${val}_name)let hasNoName = realName === '' || return hasNoName ? 'Solo ${name}' : \`Solo \${realName}\``,
 			textExpression: true,
@@ -471,13 +505,13 @@ function getSoloPreset(base: string, val: number): CompanionButtonPresetDefiniti
 	}
 }
 
-function getBoostAndCenterPreset(base: string, val: number): CompanionButtonPresetDefinition {
+function getBoostAndCenterPreset(base: string, val: number): WingPreset {
 	const path = `/${base}/${val}`
 	const name = `${base.toUpperCase()}${val}`
 	return {
 		name: 'Boost and Center Button',
 		category: 'Boost',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `let name = 'Boost & Center'const realName = $(wing:${base}${val}_name)let hasNoName = realName === '' || return hasNoName ? 'Boost & Center ${name}' : \`Boost & Center \${realName}\``,
 			textExpression: true,
@@ -534,11 +568,11 @@ function getBoostAndCenterPreset(base: string, val: number): CompanionButtonPres
 	}
 }
 
-function getTalkbackPreset(talkback: 'A' | 'B'): CompanionButtonPresetDefinition {
+function getTalkbackPreset(talkback: 'A' | 'B'): WingPreset {
 	return {
 		name: `Talkback ${talkback}`,
 		category: 'Talkback',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `TB ${talkback}`,
 			size: 'auto',
@@ -566,11 +600,11 @@ function getTalkbackPreset(talkback: 'A' | 'B'): CompanionButtonPresetDefinition
 
 // ─── Gain compensation presets ────────────────────────────────────────────────
 
-function getGainCompSnapshotPreset(): CompanionButtonPresetDefinition {
+function getGainCompSnapshotPreset(): WingPreset {
 	return {
 		name: 'Gain Comp - Snapshot',
 		category: 'Gain Compensation',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: 'SNAP\n$(wing:comp_snapshot_time)',
 			size: 'auto',
@@ -593,14 +627,14 @@ function getGainCompSnapshotPreset(): CompanionButtonPresetDefinition {
 	}
 }
 
-function getGainCompTogglePreset(mode: 'auto' | 'manual'): CompanionButtonPresetDefinition {
+function getGainCompTogglePreset(mode: 'auto' | 'manual'): WingPreset {
 	const label = mode === 'auto' ? 'COMP\nAUTO' : 'COMP\nMANUAL'
 	const activeBg = mode === 'auto' ? combineRgb(0, 180, 0) : combineRgb(200, 120, 0)
 	const activeFeedback = mode === 'auto' ? FeedbackId.GainCompActive : FeedbackId.GainCompManualActive
 	return {
 		name: `Gain Comp - ${mode === 'auto' ? 'Auto' : 'Manual'} Toggle`,
 		category: 'Gain Compensation',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: label,
 			size: 'auto',
@@ -623,12 +657,12 @@ function getGainCompTogglePreset(mode: 'auto' | 'manual'): CompanionButtonPreset
 	}
 }
 
-function getGainCompChannelPreset(ch: number): CompanionButtonPresetDefinition {
+function getGainCompChannelPreset(ch: number): WingPreset {
 	const path = `/ch/${ch}`
 	return {
 		name: `Gain Comp - CH${ch}`,
 		category: 'Gain Compensation',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `CH${ch}\n$(wing:ch${ch}_name)\nΔ$(wing:ch${ch}_comp_delta)dB`,
 			size: 'auto',
@@ -651,12 +685,12 @@ function getGainCompChannelPreset(ch: number): CompanionButtonPresetDefinition {
 	}
 }
 
-function getGainCompChannelStripPreset(ch: number): CompanionButtonPresetDefinition {
+function getGainCompChannelStripPreset(ch: number): WingPreset {
 	const path = `/ch/${ch}`
 	return {
 		name: `Gain Comp - CH${ch} Strip`,
 		category: 'Gain Compensation',
-		type: 'button',
+		type: 'simple',
 		style: {
 			// Full channel strip display matching the idea file layout:
 			text: `$(wing:ch${ch}_name)\nG: $(wing:ch${ch}_gain)dB \nT: $(wing:ch${ch}_trim)dB\nΔ$(wing:ch${ch}_comp_delta)dB`,
@@ -687,19 +721,18 @@ function getGainCompChannelStripPreset(ch: number): CompanionButtonPresetDefinit
 	}
 }
 
-function getGainCompGainKnobPreset(ch: number): CompanionButtonPresetDefinition {
+function getGainCompGainKnobPreset(ch: number): WingPreset {
 	const path = `/ch/${ch}`
 	return {
 		name: `Gain Comp - CH${ch} Gain Knob`,
 		category: 'Gain Compensation',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `CH${ch}\nG:$(wing:ch${ch}_gain)dB`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(40, 20, 60),
 		},
-		options: { rotaryActions: true },
 		steps: [
 			{
 				down: [],
@@ -718,19 +751,18 @@ function getGainCompGainKnobPreset(ch: number): CompanionButtonPresetDefinition 
 	}
 }
 
-function getGainCompTrimKnobPreset(ch: number): CompanionButtonPresetDefinition {
+function getGainCompTrimKnobPreset(ch: number): WingPreset {
 	const path = `/ch/${ch}`
 	return {
 		name: `Gain Comp - CH${ch} Trim Knob`,
 		category: 'Gain Compensation',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `CH${ch}\nT:$(wing:ch${ch}_trim)dB`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(20, 50, 60),
 		},
-		options: { rotaryActions: true },
 		steps: [
 			{
 				down: [{ actionId: CommonActions.ResetTrim, options: { sel: path } }],
@@ -749,11 +781,11 @@ function getGainCompTrimKnobPreset(ch: number): CompanionButtonPresetDefinition 
 	}
 }
 
-function getLightPresetBright(): CompanionButtonPresetDefinition {
+function getLightPresetBright(): WingPreset {
 	return {
 		name: 'Lights: Bright',
 		category: 'Lighting',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: 'Lights\\nBright',
 			size: 'auto',
@@ -798,11 +830,11 @@ function getUsbTransportPreset(
 	feedbackId: FeedbackId | null,
 	feedbackState: string | null,
 	activeColor: number,
-): CompanionButtonPresetDefinition {
+): WingPreset {
 	return {
 		name: `USB Player: ${label}`,
 		category: 'USB Player',
-		type: 'button',
+		type: 'simple',
 		style: { text: label, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
 		steps: [
 			{
@@ -823,11 +855,11 @@ function getUsbTransportPreset(
 	}
 }
 
-function getUsbTrackDisplayPreset(): CompanionButtonPresetDefinition {
+function getUsbTrackDisplayPreset(): WingPreset {
 	return {
 		name: 'USB Player: Track Display',
 		category: 'USB Player',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: '$(wing:play_song)\n$(wing:play_pos_mm_ss) / $(wing:play_length_mm_ss)',
 			size: 'auto',
@@ -851,11 +883,11 @@ function getUsbRecordPreset(
 	feedbackId: FeedbackId | null,
 	feedbackState: string | null,
 	activeColor: number,
-): CompanionButtonPresetDefinition {
+): WingPreset {
 	return {
 		name: `USB Recorder: ${label}`,
 		category: 'USB Recorder',
-		type: 'button',
+		type: 'simple',
 		style: { text: label, size: 'auto', color: combineRgb(255, 255, 255), bgcolor: combineRgb(0, 0, 0) },
 		steps: [
 			{
@@ -876,11 +908,11 @@ function getUsbRecordPreset(
 	}
 }
 
-function getUsbRecStatusPreset(): CompanionButtonPresetDefinition {
+function getUsbRecStatusPreset(): WingPreset {
 	return {
 		name: 'USB Recorder: Status',
 		category: 'USB Recorder',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: '$(wing:rec_state)\n$(wing:rec_elapsed_mm_ss)',
 			size: 'auto',
@@ -903,19 +935,18 @@ function getUsbRecStatusPreset(): CompanionButtonPresetDefinition {
 	}
 }
 
-function getHeadampGainPreset(ch: number): CompanionButtonPresetDefinition {
+function getHeadampGainPreset(ch: number): WingPreset {
 	const path = `/ch/${ch}`
 	return {
 		name: `CH${ch} Headamp Gain`,
 		category: 'Input Processing',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `CH${ch}\n$(wing:ch${ch}_gain)dB`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(40, 20, 60),
 		},
-		options: { rotaryActions: true },
 		steps: [
 			{
 				down: [],
@@ -928,11 +959,11 @@ function getHeadampGainPreset(ch: number): CompanionButtonPresetDefinition {
 	}
 }
 
-function getLightPresetDark(): CompanionButtonPresetDefinition {
+function getLightPresetDark(): WingPreset {
 	return {
 		name: 'Lights: Dark',
 		category: 'Lighting',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: 'Lights\\nDark',
 			size: 'auto',
@@ -969,12 +1000,12 @@ function getLightPresetDark(): CompanionButtonPresetDefinition {
 	}
 }
 
-function getFxBypassPreset(slot: number): CompanionButtonPresetDefinition {
+function getFxBypassPreset(slot: number): WingPreset {
 	const path = EffectCommands.Node(slot)
 	return {
 		name: 'FX Bypass Toggle',
 		category: 'FX',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `let m = $(wing:fx${slot}_model)\nreturn m && m !== 'NONE' ? \`FX${slot}\\n\${m}\` : \`FX ${slot}\``,
 			textExpression: true,
@@ -1001,19 +1032,18 @@ function getFxBypassPreset(slot: number): CompanionButtonPresetDefinition {
 	}
 }
 
-function getFxMixKnobPreset(slot: number): CompanionButtonPresetDefinition {
+function getFxMixKnobPreset(slot: number): WingPreset {
 	const path = EffectCommands.Node(slot)
 	return {
 		name: `FX${slot} Mix Knob`,
 		category: 'FX',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `FX${slot}\nMix\n$(wing:fx${slot}_fxmix)%`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(0, 60, 120),
 		},
-		options: { rotaryActions: true },
 		steps: [
 			{
 				down: [{ actionId: FxActionId.SetFxMix, options: { slot: path, mix: 100, fadeDuration: 0 } }],
@@ -1032,20 +1062,19 @@ function getFxMixKnobPreset(slot: number): CompanionButtonPresetDefinition {
 	}
 }
 
-function getFxScrollPreset(slot: number, group: string): CompanionButtonPresetDefinition {
+function getFxScrollPreset(slot: number, group: string): WingPreset {
 	const path = EffectCommands.Node(slot)
 	const label = group.charAt(0).toUpperCase() + group.slice(1)
 	return {
 		name: `FX${slot} Scroll ${label}`,
 		category: 'FX',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `FX${slot}\n$(wing:fx${slot}_model)\n◀ ${label} ▶`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(80, 0, 100),
 		},
-		options: { rotaryActions: true },
 		steps: [
 			{
 				down: [{ actionId: FxActionId.SetFxInsertOn, options: { slot: path, enable: -1 } }],
@@ -1074,19 +1103,18 @@ function getFxReverbParamKnobPreset(
 	label: string,
 	step: number,
 	resetValue: number,
-): CompanionButtonPresetDefinition {
+): WingPreset {
 	const path = EffectCommands.Node(slot)
 	return {
 		name: `FX${slot} Reverb ${label} Knob`,
 		category: 'FX',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `FX${slot}\n${label}`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(0, 80, 60),
 		},
-		options: { rotaryActions: true },
 		steps: [
 			{
 				down: [
@@ -1123,11 +1151,11 @@ const WLIVE_TRANSPORT_COLOR: Record<string, number> = {
 	PPAUSE: 0xb48c00,
 }
 
-function getWLiveStatusPreset(card: number): CompanionButtonPresetDefinition {
+function getWLiveStatusPreset(card: number): WingPreset {
 	return {
 		name: `WLive ${card} - Status`,
 		category: 'WLive',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `WL${card} $(wing:wlive_${card}_state)\n$(wing:wlive_${card}_elapsed_time_hh_mm_ss)`,
 			size: 'auto',
@@ -1155,13 +1183,13 @@ function getWLiveStatusPreset(card: number): CompanionButtonPresetDefinition {
 	}
 }
 
-function getWLiveTransportPreset(card: number, action: string): CompanionButtonPresetDefinition {
+function getWLiveTransportPreset(card: number, action: string): WingPreset {
 	const label = WLIVE_TRANSPORT_LABEL[action] ?? action
 	const activeColor = WLIVE_TRANSPORT_COLOR[action] ?? 0x404040
 	return {
 		name: `WLive ${card} - ${label}`,
 		category: 'WLive',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `WL${card}\n${label}`,
 			size: 'auto',
@@ -1187,11 +1215,11 @@ function getWLiveTransportPreset(card: number, action: string): CompanionButtonP
 	}
 }
 
-function getWLiveAddMarkerPreset(card: number): CompanionButtonPresetDefinition {
+function getWLiveAddMarkerPreset(card: number): WingPreset {
 	return {
 		name: `WLive ${card} - Add Marker`,
 		category: 'WLive',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `WL${card}\n⚑ Mark`,
 			size: 'auto',
@@ -1208,11 +1236,11 @@ function getWLiveAddMarkerPreset(card: number): CompanionButtonPresetDefinition 
 	}
 }
 
-function getWLiveGotoMarkerPreset(card: number, marker: number): CompanionButtonPresetDefinition {
+function getWLiveGotoMarkerPreset(card: number, marker: number): WingPreset {
 	return {
 		name: `WLive ${card} - Goto Marker ${marker}`,
 		category: 'WLive',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `WL${card}\n▶ M${marker}`,
 			size: 'auto',
@@ -1229,11 +1257,11 @@ function getWLiveGotoMarkerPreset(card: number, marker: number): CompanionButton
 	}
 }
 
-function getWLiveSdFreePreset(card: number): CompanionButtonPresetDefinition {
+function getWLiveSdFreePreset(card: number): WingPreset {
 	return {
 		name: `WLive ${card} - SD Free`,
 		category: 'WLive',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `WL${card} SD\n$(wing:wlive_${card}_sdfree_hh_mm_ss)\nfree`,
 			size: 'auto',
@@ -1261,11 +1289,11 @@ function getWLiveSdFreePreset(card: number): CompanionButtonPresetDefinition {
 	}
 }
 
-function getWLiveSessionInfoPreset(card: number): CompanionButtonPresetDefinition {
+function getWLiveSessionInfoPreset(card: number): WingPreset {
 	return {
 		name: `WLive ${card} - Session Info`,
 		category: 'WLive',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `WL${card}\nSess $(wing:wlive_${card}_session_current)/$(wing:wlive_${card}_session_total)\n$(wing:wlive_${card}_session_len_hh_mm_ss)`,
 			size: 'auto',
@@ -1283,11 +1311,11 @@ function getWLiveSessionInfoPreset(card: number): CompanionButtonPresetDefinitio
 	}
 }
 
-function getWLiveOpenSessionPreset(card: number): CompanionButtonPresetDefinition {
+function getWLiveOpenSessionPreset(card: number): WingPreset {
 	return {
 		name: `WLive ${card} - Open Session`,
 		category: 'WLive',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `WL${card}\n▶ Sess 1`,
 			size: 'auto',
@@ -1304,13 +1332,13 @@ function getWLiveOpenSessionPreset(card: number): CompanionButtonPresetDefinitio
 	}
 }
 
-function getPhaseInvertPreset(base: string, num: number): CompanionButtonPresetDefinition {
+function getPhaseInvertPreset(base: string, num: number): WingPreset {
 	const path = `/${base}/${num}`
 	const name = `${base.toUpperCase()}${num}`
 	return {
 		name: `${name} Phase Invert`,
 		category: 'Monitor Tools',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${name}\nΦ`,
 			size: 'auto',
@@ -1333,20 +1361,19 @@ function getPhaseInvertPreset(base: string, num: number): CompanionButtonPresetD
 	}
 }
 
-function getWidthKnobPreset(base: string, num: number): CompanionButtonPresetDefinition {
+function getWidthKnobPreset(base: string, num: number): WingPreset {
 	const path = `/${base}/${num}`
 	const name = `${base.toUpperCase()}${num}`
 	return {
 		name: `${name} Width Knob`,
 		category: 'Monitor Tools',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${name}\nWidth`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(0, 80, 100),
 		},
-		options: { rotaryActions: true },
 		steps: [
 			{
 				down: [{ actionId: CommonActions.SetWidth, options: { sel: path, width: 0, fadeDuration: 0 } }],
@@ -1359,13 +1386,13 @@ function getWidthKnobPreset(base: string, num: number): CompanionButtonPresetDef
 	}
 }
 
-function getSendModePreset(ch: number, bus: number): CompanionButtonPresetDefinition {
+function getSendModePreset(ch: number, bus: number): WingPreset {
 	const src = `/ch/${ch}`
 	const dest = `/bus/${bus}`
 	return {
 		name: `CH${ch}→BUS${bus} Send Mode`,
 		category: 'Monitor Tools',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `CH${ch}→B${bus}\nPRE`,
 			size: 'auto',
@@ -1398,19 +1425,18 @@ function getSendModePreset(ch: number, bus: number): CompanionButtonPresetDefini
 	}
 }
 
-function getFxEffectParamKnobPreset(slot: number): CompanionButtonPresetDefinition {
+function getFxEffectParamKnobPreset(slot: number): WingPreset {
 	const path = EffectCommands.Node(slot)
 	return {
 		name: `FX${slot} Effect Param Knob`,
 		category: 'FX',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `FX${slot}\nParam`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(60, 40, 100),
 		},
-		options: { rotaryActions: true },
 		steps: [
 			{
 				down: [
@@ -1450,19 +1476,18 @@ function getFxDelayParamKnobPreset(
 	label: string,
 	step: number,
 	resetValue: number,
-): CompanionButtonPresetDefinition {
+): WingPreset {
 	const path = EffectCommands.Node(slot)
 	return {
 		name: `FX${slot} Delay ${label} Knob`,
 		category: 'FX',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `FX${slot}\n${label}`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(100, 60, 0),
 		},
-		options: { rotaryActions: true },
 		steps: [
 			{
 				down: [
@@ -1483,13 +1508,13 @@ function getFxDelayParamKnobPreset(
 	}
 }
 
-function getSofPresets(base: string, val: number): CompanionButtonPresetDefinition {
+function getSofPresets(base: string, val: number): WingPreset {
 	const path = `/${base}/${val}`
 	const name = `${base.toUpperCase()}${val}`
 	return {
 		name: 'Sends on Fader',
 		category: 'Sends on Fader',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `let name = 'SOF'const realName = $(wing:${base}${val}_name)let hasNoName = realName === '' || isreturn hasNoName ? 'SOF ${name}' : \`SOF \${realName}\``,
 			textExpression: true,
@@ -1529,12 +1554,12 @@ function getSofPresets(base: string, val: number): CompanionButtonPresetDefiniti
 // Trim presets
 ////////////////////////////////////////////////////////////////
 
-function getTrimResetPreset(base: string, num: number): CompanionButtonPresetDefinition {
+function getTrimResetPreset(base: string, num: number): WingPreset {
 	const path = `/${base}/${num}`
 	return {
 		name: `${base.toUpperCase()}${num} Trim Reset`,
 		category: 'Input Processing',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${base.toUpperCase()}${num}\nTrim\nReset`,
 			size: 'auto',
@@ -1550,12 +1575,12 @@ function getTrimResetPreset(base: string, num: number): CompanionButtonPresetDef
 // Mute group presets
 ////////////////////////////////////////////////////////////////
 
-function getMuteGroupTogglePreset(n: number): CompanionButtonPresetDefinition {
+function getMuteGroupTogglePreset(n: number): WingPreset {
 	const path = `/mgrp/${n}`
 	return {
 		name: `Mute Group ${n} Toggle`,
 		category: 'Mute Groups',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `MG${n}`,
 			size: 'auto',
@@ -1573,12 +1598,12 @@ function getMuteGroupTogglePreset(n: number): CompanionButtonPresetDefinition {
 	}
 }
 
-function getMuteGroupMomentaryPreset(n: number): CompanionButtonPresetDefinition {
+function getMuteGroupMomentaryPreset(n: number): WingPreset {
 	const path = `/mgrp/${n}`
 	return {
 		name: `Mute Group ${n} Momentary`,
 		category: 'Mute Groups',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `MG${n}\nHold`,
 			size: 'auto',
@@ -1595,11 +1620,11 @@ function getMuteGroupMomentaryPreset(n: number): CompanionButtonPresetDefinition
 	}
 }
 
-function getMuteGroupReleaseAllPreset(): CompanionButtonPresetDefinition {
+function getMuteGroupReleaseAllPreset(): WingPreset {
 	return {
 		name: 'Release All Mute Groups',
 		category: 'Mute Groups',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: 'Release\nAll MG',
 			size: 'auto',
@@ -1615,13 +1640,13 @@ function getMuteGroupReleaseAllPreset(): CompanionButtonPresetDefinition {
 // Fader presets
 ////////////////////////////////////////////////////////////////
 
-function getFaderPreset(base: string, num: number, targetDb: number, label: string): CompanionButtonPresetDefinition {
+function getFaderPreset(base: string, num: number, targetDb: number, label: string): WingPreset {
 	const path = `/${base}/${num}`
 	const BASE = base.toUpperCase()
 	return {
 		name: `${BASE}${num} Fader ${label}`,
 		category: 'Fader',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${BASE}${num}\n${label}`,
 			size: 'auto',
@@ -1643,12 +1668,12 @@ function getFaderPreset(base: string, num: number, targetDb: number, label: stri
 	}
 }
 
-function getDcaMomentaryMutePreset(n: number): CompanionButtonPresetDefinition {
+function getDcaMomentaryMutePreset(n: number): WingPreset {
 	const path = `/dca/${n}`
 	return {
 		name: `DCA${n} Momentary Mute`,
 		category: 'DCA',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `DCA${n}\nHold`,
 			size: 'auto',
@@ -1669,13 +1694,13 @@ function getDcaMomentaryMutePreset(n: number): CompanionButtonPresetDefinition {
 // Phantom power preset
 ////////////////////////////////////////////////////////////////
 
-function getPhantomPreset(base: string, num: number): CompanionButtonPresetDefinition {
+function getPhantomPreset(base: string, num: number): WingPreset {
 	const path = `/${base}/${num}`
 	const name = `${base.toUpperCase()}${num}`
 	return {
 		name: `${name} Phantom Power`,
 		category: 'Input Processing',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${name}\nΦ48V`,
 			size: 'auto',
@@ -1697,13 +1722,13 @@ function getPhantomPreset(base: string, num: number): CompanionButtonPresetDefin
 // Channel reset preset
 ////////////////////////////////////////////////////////////////
 
-function getChannelResetPreset(base: string, num: number): CompanionButtonPresetDefinition {
+function getChannelResetPreset(base: string, num: number): WingPreset {
 	const path = `/${base}/${num}`
 	const name = `${base.toUpperCase()}${num}`
 	return {
 		name: `${name} Reset`,
 		category: 'Channel Strip',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${name}\nReset`,
 			size: 'auto',
@@ -1715,13 +1740,13 @@ function getChannelResetPreset(base: string, num: number): CompanionButtonPreset
 	}
 }
 
-function getBatchKillSendsPreset(base: string, num: number): CompanionButtonPresetDefinition {
+function getBatchKillSendsPreset(base: string, num: number): WingPreset {
 	const path = `/${base}/${num}`
 	const name = `${base.toUpperCase()}${num}`
 	return {
 		name: `${name} Kill All Sends`,
 		category: 'Channel Strip',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${name}\nKill\nSends`,
 			size: 'auto',
@@ -1737,11 +1762,11 @@ function getBatchKillSendsPreset(base: string, num: number): CompanionButtonPres
 // Talkback latch presets
 ////////////////////////////////////////////////////////////////
 
-function getTalkbackLatchPreset(bus: 'A' | 'B'): CompanionButtonPresetDefinition {
+function getTalkbackLatchPreset(bus: 'A' | 'B'): WingPreset {
 	return {
 		name: `Talkback ${bus} Latch`,
 		category: 'Talkback',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `Talk ${bus}\nLatch`,
 			size: 'auto',
@@ -1768,11 +1793,11 @@ function getTalkbackLatchPreset(bus: 'A' | 'B'): CompanionButtonPresetDefinition
 // AES50 status and solo-clear presets
 ////////////////////////////////////////////////////////////////
 
-function getAes50StatusPreset(port: 'A' | 'B' | 'C'): CompanionButtonPresetDefinition {
+function getAes50StatusPreset(port: 'A' | 'B' | 'C'): WingPreset {
 	return {
 		name: `AES50 ${port} Status`,
 		category: 'Console Status',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `AES50 ${port}`,
 			size: 'auto',
@@ -1795,11 +1820,11 @@ function getAes50StatusPreset(port: 'A' | 'B' | 'C'): CompanionButtonPresetDefin
 	}
 }
 
-function getSoloClearPreset(): CompanionButtonPresetDefinition {
+function getSoloClearPreset(): WingPreset {
 	return {
 		name: 'Clear Solo',
 		category: 'Console Status',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: 'Clear\nSolo',
 			size: 'auto',
@@ -1817,11 +1842,11 @@ const SOLO_MON_ICON: Record<string, string> = {
 	'PH+SPK': '🔊\n🎧',
 }
 
-function getSoloMonitorPreset(out: 'SPK' | 'PH' | 'PH+SPK', label: string): CompanionButtonPresetDefinition {
+function getSoloMonitorPreset(out: 'SPK' | 'PH' | 'PH+SPK', label: string): WingPreset {
 	return {
 		name: `Solo Monitor - ${label}`,
 		category: 'Monitor',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: SOLO_MON_ICON[out] ?? label,
 			size: 'auto',
@@ -1848,12 +1873,12 @@ function getSoloMonitorPreset(out: 'SPK' | 'PH' | 'PH+SPK', label: string): Comp
 // Scene presets
 ////////////////////////////////////////////////////////////////
 
-function getSceneStepPreset(dir: 'PREV' | 'NEXT'): CompanionButtonPresetDefinition {
+function getSceneStepPreset(dir: 'PREV' | 'NEXT'): WingPreset {
 	const label = dir === 'PREV' ? '◀ Prev' : 'Next ▶'
 	return {
 		name: `Scene ${dir === 'PREV' ? 'Previous' : 'Next'}`,
 		category: 'Scene',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: label,
 			size: 'auto',
@@ -1875,11 +1900,11 @@ function getSceneStepPreset(dir: 'PREV' | 'NEXT'): CompanionButtonPresetDefiniti
 	}
 }
 
-function getSceneStatusPreset(): CompanionButtonPresetDefinition {
+function getSceneStatusPreset(): WingPreset {
 	return {
 		name: 'Scene Status',
 		category: 'Scene',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `Scene\n$(wing:active_scene_number)\n$(wing:active_scene_name)`,
 			size: 'auto',
@@ -1891,11 +1916,11 @@ function getSceneStatusPreset(): CompanionButtonPresetDefinition {
 	}
 }
 
-function getSceneDirectPreset(i: number): CompanionButtonPresetDefinition {
+function getSceneDirectPreset(i: number): WingPreset {
 	return {
 		name: `Scene ${i} Direct Recall`,
 		category: 'Scene',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `Scene\n${i}`,
 			size: 'auto',
@@ -1927,12 +1952,12 @@ function getSceneDirectPreset(i: number): CompanionButtonPresetDefinition {
 // DCA toggle mute preset
 ////////////////////////////////////////////////////////////////
 
-function getDcaToggleMutePreset(n: number): CompanionButtonPresetDefinition {
+function getDcaToggleMutePreset(n: number): WingPreset {
 	const path = `/dca/${n}`
 	return {
 		name: `DCA${n} Mute Toggle`,
 		category: 'DCA',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `DCA${n}\nMute`,
 			size: 'auto',
@@ -1959,19 +1984,18 @@ function getDcaToggleMutePreset(n: number): CompanionButtonPresetDefinition {
 // Monitor engineer presets
 ////////////////////////////////////////////////////////////////
 
-function getMonitorMasterPreset(bus: number): CompanionButtonPresetDefinition {
+function getMonitorMasterPreset(bus: number): WingPreset {
 	const path = `/bus/${bus}`
 	return {
 		name: `Monitor BUS${bus} Master`,
 		category: 'Monitor',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `BUS${bus}`,
 			size: '14',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(0, 30, 50),
 		},
-		options: { rotaryActions: true },
 		steps: [
 			{
 				down: [{ actionId: CommonActions.SetMute, options: { sel: path, mute: -1 } }],
@@ -2004,20 +2028,19 @@ function getMonitorMasterPreset(bus: number): CompanionButtonPresetDefinition {
 	}
 }
 
-function getMonitorSendPreset(ch: number, bus: number): CompanionButtonPresetDefinition {
+function getMonitorSendPreset(ch: number, bus: number): WingPreset {
 	const src = `/ch/${ch}`
 	const dest = `/bus/${bus}`
 	return {
 		name: `Monitor CH${ch} → BUS${bus}`,
 		category: 'Monitor',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `CH${ch}\n→B${bus}`,
 			size: 'auto',
 			color: combineRgb(200, 220, 255),
 			bgcolor: combineRgb(0, 25, 45),
 		},
-		options: { rotaryActions: true },
 		steps: [
 			{
 				down: [
@@ -2071,20 +2094,19 @@ function getMonitorSendPreset(ch: number, bus: number): CompanionButtonPresetDef
 // Fader display preset (rotary knob with live level bar)
 ////////////////////////////////////////////////////////////////
 
-function getFaderDisplayPreset(base: string, num: number): CompanionButtonPresetDefinition {
+function getFaderDisplayPreset(base: string, num: number): WingPreset {
 	const path = `/${base}/${num}`
 	const BASE = base.toUpperCase()
 	return {
 		name: `${BASE}${num} Fader Display`,
 		category: 'Fader',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${BASE}${num}`,
 			size: '14',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(10, 20, 40),
 		},
-		options: { rotaryActions: true },
 		steps: [
 			{
 				down: [],
@@ -2128,20 +2150,19 @@ function getFaderDisplayPreset(base: string, num: number): CompanionButtonPreset
 // Channel → Bus send level rotary preset
 ////////////////////////////////////////////////////////////////
 
-function getSendLevelKnobPreset(ch: number, bus: number): CompanionButtonPresetDefinition {
+function getSendLevelKnobPreset(ch: number, bus: number): WingPreset {
 	const src = `/ch/${ch}`
 	const dest = `/bus/${bus}`
 	return {
 		name: `CH${ch} → BUS${bus} Send`,
 		category: 'Bus Sends',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `CH${ch}\n→B${bus}\nSend`,
 			size: 'auto',
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(0, 40, 60),
 		},
-		options: { rotaryActions: true },
 		steps: [
 			{
 				down: [{ actionId: CommonActions.SetSendMute, options: { src, dest, mute: -1 } }],
@@ -2197,13 +2218,13 @@ const REMASTER_TYPE: Record<string, { prefix: string; label: string }> = {
 	mtx: { prefix: 'MX', label: 'Matrix' },
 }
 
-function getRemasterPreset(type: 'bus' | 'main' | 'mtx', num: number, delta: number): CompanionButtonPresetDefinition {
+function getRemasterPreset(type: 'bus' | 'main' | 'mtx', num: number, delta: number): WingPreset {
 	const sign = delta >= 0 ? '+' : ''
 	const { prefix, label } = REMASTER_TYPE[type]
 	return {
 		name: `${label} ${num} Remaster ${sign}${delta}dB`,
 		category: 'Bus Remaster',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${prefix}${num}\\n${sign}${delta}dB`,
 			size: 'auto',
@@ -2230,12 +2251,12 @@ function getRemasterPreset(type: 'bus' | 'main' | 'mtx', num: number, delta: num
 	}
 }
 
-function getRemasterSelectedPreset(delta: number): CompanionButtonPresetDefinition {
+function getRemasterSelectedPreset(delta: number): WingPreset {
 	const sign = delta >= 0 ? '+' : ''
 	return {
 		name: `Selected Strip Remaster ${sign}${delta}dB`,
 		category: 'Bus Remaster',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `SEL\\n${sign}${delta}dB`,
 			size: 'auto',
@@ -2264,16 +2285,11 @@ function getRemasterSelectedPreset(delta: number): CompanionButtonPresetDefiniti
 
 // ─── Talkback Switcher presets ────────────────────────────────────────────────
 
-function getTbSwExclusivePreset(
-	tb: 'A' | 'B',
-	dest: string,
-	name: string,
-	activeBg: number,
-): CompanionButtonPresetDefinition {
+function getTbSwExclusivePreset(tb: 'A' | 'B', dest: string, name: string, activeBg: number): WingPreset {
 	return {
 		name: `TB ${tb} → ${name}`,
 		category: 'Talkback Switcher',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${tb}:${name}`,
 			size: 'auto',
@@ -2314,16 +2330,11 @@ function getTbSwExclusivePreset(
 	}
 }
 
-function getTbSwAdditivePreset(
-	tb: 'A' | 'B',
-	dest: string,
-	name: string,
-	activeBg: number,
-): CompanionButtonPresetDefinition {
+function getTbSwAdditivePreset(tb: 'A' | 'B', dest: string, name: string, activeBg: number): WingPreset {
 	return {
 		name: `TB ${tb} + ${name}`,
 		category: 'Talkback Switcher',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${tb}+${name}`,
 			size: 'auto',
@@ -2358,11 +2369,11 @@ function getTbSwAdditivePreset(
 	}
 }
 
-function getTbSwAllCallPreset(tb: 'A' | 'B'): CompanionButtonPresetDefinition {
+function getTbSwAllCallPreset(tb: 'A' | 'B'): WingPreset {
 	return {
 		name: `TB ${tb} → ALL`,
 		category: 'Talkback Switcher',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${tb}:ALL`,
 			size: 'auto',
@@ -2390,11 +2401,11 @@ function getTbSwAllCallPreset(tb: 'A' | 'B'): CompanionButtonPresetDefinition {
 	}
 }
 
-function getTbSwBackPreset(tb: 'A' | 'B'): CompanionButtonPresetDefinition {
+function getTbSwBackPreset(tb: 'A' | 'B'): WingPreset {
 	return {
 		name: `TB ${tb} — Back`,
 		category: 'Talkback Switcher',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${tb}:Back`,
 			size: 'auto',
@@ -2416,11 +2427,11 @@ function getTbSwBackPreset(tb: 'A' | 'B'): CompanionButtonPresetDefinition {
 	}
 }
 
-function getTbSwOffPreset(tb: 'A' | 'B'): CompanionButtonPresetDefinition {
+function getTbSwOffPreset(tb: 'A' | 'B'): WingPreset {
 	return {
 		name: `TB ${tb} — OFF`,
 		category: 'Talkback Switcher',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${tb}:OFF`,
 			size: 'auto',
@@ -2442,11 +2453,11 @@ function getTbSwOffPreset(tb: 'A' | 'B'): CompanionButtonPresetDefinition {
 	}
 }
 
-function getTbSwPttPreset(tb: 'A' | 'B'): CompanionButtonPresetDefinition {
+function getTbSwPttPreset(tb: 'A' | 'B'): WingPreset {
 	return {
 		name: `TB ${tb} — PTT`,
 		category: 'Talkback Switcher',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `${tb}:PTT`,
 			size: 'auto',
@@ -2479,11 +2490,11 @@ function getTbSwPttPreset(tb: 'A' | 'B'): CompanionButtonPresetDefinition {
 	}
 }
 
-function getTbSwDualPttPreset(): CompanionButtonPresetDefinition {
+function getTbSwDualPttPreset(): WingPreset {
 	return {
 		name: 'TB A + B — PTT',
 		category: 'Talkback Switcher',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: 'A+B PTT',
 			size: 'auto',
@@ -2524,11 +2535,11 @@ function getTbSwDualPttPreset(): CompanionButtonPresetDefinition {
 	}
 }
 
-function getTbSwDualAllCallPreset(): CompanionButtonPresetDefinition {
+function getTbSwDualAllCallPreset(): WingPreset {
 	return {
 		name: 'TB A + B — ALL',
 		category: 'Talkback Switcher',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: 'A+B ALL',
 			size: 'auto',
@@ -2558,11 +2569,11 @@ function getTbSwDualAllCallPreset(): CompanionButtonPresetDefinition {
 
 // ─── Gain compensation queue presets ─────────────────────────────────────────
 
-function getGainQueueSlotPreset(slot: number): CompanionButtonPresetDefinition {
+function getGainQueueSlotPreset(slot: number): WingPreset {
 	return {
 		name: `Gain Queue ${slot}`,
 		category: 'Gain Compensation',
-		type: 'button',
+		type: 'simple',
 		style: {
 			text: `#${slot}`,
 			size: 'auto',

@@ -1,5 +1,4 @@
-import { CompanionActionDefinitions } from '@companion-module/base'
-import { CompanionActionWithCallback } from './common.js'
+import { CompanionActionWithCallback, WingActionDefinitions } from './common.js'
 import { CardsCommands as Commands } from '../commands/cards.js'
 import { InstanceBaseExt } from '../types.js'
 import { WingConfig } from '../config.js'
@@ -31,7 +30,7 @@ export enum CardsActionId {
 	FormatCard = 'format-card',
 }
 
-export function createCardsActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
+export function createCardsActions(self: InstanceBaseExt<WingConfig>): WingActionDefinitions {
 	const send = self.connection!.sendCommand.bind(self.connection)
 
 	const actions: { [id in CardsActionId]: CompanionActionWithCallback | undefined } = {

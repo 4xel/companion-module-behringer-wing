@@ -1,9 +1,8 @@
-import { CompanionActionDefinitions } from '@companion-module/base'
 import { GetDropdown, GetDropdownWithVariables } from '../choices/common.js'
 import { getChannelProcessOrderChoices, getFilterModelOptions } from '../choices/channel.js'
 import { ChannelCommands as Commands } from '../commands/channel.js'
 import * as ActionUtil from './utils.js'
-import { CompanionActionWithCallback } from './common.js'
+import { CompanionActionWithCallback, WingActionDefinitions } from './common.js'
 import { EqModelDropdown, EqParameterDropdown } from '../choices/eq.js'
 import { EqModelChoice } from '../choices/eq.js'
 import { InstanceBaseExt } from '../types.js'
@@ -17,7 +16,7 @@ export enum ChannelActions {
 	SetChannelProcessOrder = 'set-channel-process-order',
 }
 
-export function createChannelActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
+export function createChannelActions(self: InstanceBaseExt<WingConfig>): WingActionDefinitions {
 	const send = self.connection!.sendCommand.bind(self.connection)
 	const ensureLoaded = (path: string, arg?: string | number): void => {
 		self.connection?.sendCommand(path, arg).catch(() => {})

@@ -1,5 +1,4 @@
-import { CompanionActionDefinitions } from '@companion-module/base'
-import { CompanionActionWithCallback } from './common.js'
+import { CompanionActionWithCallback, WingActionDefinitions } from './common.js'
 import { InstanceBaseExt } from '../types.js'
 import { WingConfig } from '../config.js'
 import { ControlCommands } from '../commands/control.js'
@@ -28,7 +27,7 @@ export enum OtherActionId {
 	TriggerUserControl = 'trigger-user-control',
 }
 
-export function createControlActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
+export function createControlActions(self: InstanceBaseExt<WingConfig>): WingActionDefinitions {
 	const send = self.connection!.sendCommand.bind(self.connection)
 	const state = self.stateHandler?.state
 	if (!state) throw new Error('State handler or state is not available')

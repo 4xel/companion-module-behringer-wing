@@ -1,5 +1,4 @@
-import { CompanionActionDefinitions } from '@companion-module/base'
-import { CompanionActionWithCallback } from './common.js'
+import { CompanionActionWithCallback, WingActionDefinitions } from './common.js'
 import { UsbPlayerCommands as Commands } from '../commands/usbplayer.js'
 import { InstanceBaseExt } from '../types.js'
 import { WingConfig } from '../config.js'
@@ -13,7 +12,7 @@ export enum UsbPlayerActionId {
 	RecordAction = 'record-action',
 }
 
-export function createUsbPlayerActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
+export function createUsbPlayerActions(self: InstanceBaseExt<WingConfig>): WingActionDefinitions {
 	const send = self.connection!.sendCommand.bind(self.connection)
 
 	const actions: { [id in UsbPlayerActionId]: CompanionActionWithCallback | undefined } = {

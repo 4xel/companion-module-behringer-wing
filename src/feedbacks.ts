@@ -47,10 +47,42 @@ function getActualFromState(path: string, state: WingState): number | undefined 
 	return typeof raw === 'number' ? raw : undefined
 }
 
-type CompanionFeedbackWithCallback = SetRequired<
-	CompanionBooleanFeedbackDefinition,
-	'callback' | 'subscribe' | 'unsubscribe'
->
+/**
+ * Companion base v2 removed the `subscribe` hook from feedback definitions (only
+ * `unsubscribe` remains). We keep authoring a module-defined `subscribe` here and
+ * fold it into `callback` (idempotently, per feedback instance) in GetFeedbacksList
+ * via {@link foldSubscribeIntoCallback} before handing definitions to Companion.
+ */
+type CompanionFeedbackWithCallback = SetRequired<CompanionBooleanFeedbackDefinition, 'callback' | 'unsubscribe'> & {
+	subscribe?: (event: CompanionFeedbackInfo) => void | Promise<void>
+}
+
+/**
+ * Fold any module-defined `subscribe` hook into the feedback's `callback` and strip it,
+ * so the definitions satisfy the base v2 shape. The hook runs once per feedback instance
+ * id (subscriptions are idempotent and renewed by the polling loop).
+ */
+function foldSubscribeIntoCallback(defs: Record<string, unknown>): CompanionFeedbackDefinitions {
+	const subscribed = new Set<string>()
+	for (const def of Object.values(defs)) {
+		const entry = def as
+			{ callback: (event: CompanionFeedbackInfo, context: unknown) => unknown; subscribe?: unknown } | undefined
+		if (!entry) continue
+		const sub = entry.subscribe
+		if (typeof sub === 'function') {
+			const origCallback = entry.callback
+			entry.callback = (event: CompanionFeedbackInfo, context: unknown): unknown => {
+				if (!subscribed.has(event.id)) {
+					subscribed.add(event.id)
+					void (sub as (event: CompanionFeedbackInfo) => void | Promise<void>)(event)
+				}
+				return origCallback(event, context)
+			}
+			delete (entry as { subscribe?: unknown }).subscribe
+		}
+	}
+	return defs as CompanionFeedbackDefinitions
+}
 
 export enum FeedbackId {
 	Mute = 'mute',
@@ -730,16 +762,11 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 				const sel = ActionUtil.getStringWithVariables(event, 'sel')
 				const on = ActionUtil.getNumberWithVariables(event, 'on')
 
-				let preOn = false
-				let postOn = false
+				const preCmd = ActionUtil.getPreInsertOnCommand(sel, getNodeNumber(event, 'sel'))
+				const preOn = (StateUtil.getNumberFromState(preCmd, state) ?? 0) == on
 
-				let cmd = ActionUtil.getPreInsertOnCommand(sel, getNodeNumber(event, 'sel'))
-				let currentValue = StateUtil.getNumberFromState(cmd, state)
-				preOn = (currentValue ?? 0) == on
-
-				cmd = ActionUtil.getPostInsertCommand(sel, getNodeNumber(event, 'sel'))
-				currentValue = StateUtil.getNumberFromState(cmd, state)
-				postOn = (currentValue ?? 0) == on
+				const postCmd = ActionUtil.getPostInsertCommand(sel, getNodeNumber(event, 'sel'))
+				const postOn = (StateUtil.getNumberFromState(postCmd, state) ?? 0) == on
 
 				if (insert === 'pre') return preOn
 				if (insert === 'post') return postOn
@@ -1139,7 +1166,7 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 		},
 	}
 
-	return { ...feedbacks, ...advancedFeedbacks }
+	return foldSubscribeIntoCallback({ ...feedbacks, ...advancedFeedbacks })
 }
 
 // Wing strip colour palette — indices 1-18 from official Wing documentation.

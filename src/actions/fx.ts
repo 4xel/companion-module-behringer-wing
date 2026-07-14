@@ -1,5 +1,5 @@
-import { CompanionActionDefinitions, DropdownChoice } from '@companion-module/base'
-import { CompanionActionWithCallback } from './common.js'
+import { DropdownChoice } from '@companion-module/base'
+import { CompanionActionWithCallback, WingActionDefinitions } from './common.js'
 import { InstanceBaseExt } from '../types.js'
 import { WingConfig } from '../config.js'
 import {
@@ -206,7 +206,7 @@ export enum FxActionId {
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
-export function createFxActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
+export function createFxActions(self: InstanceBaseExt<WingConfig>): WingActionDefinitions {
 	const send = self.connection!.sendCommand.bind(self.connection)
 	const ensureLoaded = (path: string, arg?: string | number): void => {
 		self.connection?.sendCommand(path, arg).catch(() => {})

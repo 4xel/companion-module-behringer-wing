@@ -1,5 +1,4 @@
-import { CompanionActionDefinitions } from '@companion-module/base'
-import { CompanionActionWithCallback } from './common.js'
+import { CompanionActionWithCallback, WingActionDefinitions } from './common.js'
 import { InstanceBaseExt } from '../types.js'
 import { WingConfig } from '../config.js'
 import { IoCommands } from '../commands/io.js'
@@ -11,7 +10,7 @@ export enum IoActionId {
 	MainAltSwitch = 'main-alt-swtich',
 }
 
-export function createIoActions(self: InstanceBaseExt<WingConfig>): CompanionActionDefinitions {
+export function createIoActions(self: InstanceBaseExt<WingConfig>): WingActionDefinitions {
 	const send = self.connection!.sendCommand.bind(self.connection)
 
 	const actions: { [id in IoActionId]: CompanionActionWithCallback | undefined } = {
