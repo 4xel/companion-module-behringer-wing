@@ -56,10 +56,17 @@ export function createTalkbackSwitcherActions(self: InstanceBaseExt<WingConfig>)
 		[TalkbackSwitcherActionId.ExclusiveDest]: {
 			name: 'Talkback - Set Exclusive Destination',
 			description:
-				'Route one talkback bus to a single destination, clearing all others. Optionally open the mic simultaneously (useful for PTT destination buttons).',
+				'Route a talkback bus to one or more selected destinations, clearing all others. Optionally open the mic simultaneously.',
 			options: [
 				...GetDropdownWithVariables('Talkback', 'tb', getTalkbackOptions()),
-				...GetDropdownWithVariables('Destination', 'dest', destinations),
+				{
+					type: 'multidropdown',
+					id: 'dests',
+					label: 'Destinations',
+					choices: destinations,
+					default: destinations.slice(0, 1).map((d) => d.id),
+					minSelection: 1,
+				} satisfies SomeCompanionActionInputField,
 				...GetDropdownWithVariables('Open Mic', 'open_mic', [
 					getIdLabelPair('0', 'No — switch destination only'),
 					getIdLabelPair('1', 'Yes — switch destination and open mic'),
@@ -67,16 +74,18 @@ export function createTalkbackSwitcherActions(self: InstanceBaseExt<WingConfig>)
 			],
 			callback: async (event) => {
 				const tb = ActionUtil.getStringWithVariables(event, 'tb')
-				const dest = ActionUtil.getStringWithVariables(event, 'dest')
+				const selected = (event.options['dests'] ?? []) as string[]
 				const openMic = ActionUtil.getNumberWithVariables(event, 'open_mic')
 
 				snapshotCurrent(tb)
 				await clearAll(tb)
 
-				const targetCmd = ActionUtil.getTalkbackAssignCommand(tb, dest)
-				if (targetCmd) {
-					await send(targetCmd, 1)
-					state.set(targetCmd, [{ type: 'i', value: 1 }])
+				for (const destId of selected) {
+					const cmd = ActionUtil.getTalkbackAssignCommand(tb, destId)
+					if (cmd) {
+						await send(cmd, 1)
+						state.set(cmd, [{ type: 'i', value: 1 }])
+					}
 				}
 
 				if (openMic === 1) {

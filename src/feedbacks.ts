@@ -65,6 +65,7 @@ export enum FeedbackId {
 	SoloDim = 'solo-dim',
 	SoloMono = 'solo-mono',
 	SoloLRSwap = 'solo-lr-swap',
+	SoloMonitor = 'solo-monitor',
 	Talkback = 'talkback',
 	TalkbackAssign = 'talkback-assign',
 	InsertOn = 'insert-on',
@@ -618,6 +619,30 @@ export function GetFeedbacksList(_self: InstanceBaseExt<WingConfig>): CompanionF
 			unsubscribe: (event: CompanionFeedbackInfo): void => {
 				const cmd = ConfigurationCommands.SoloLRSwap()
 				unsubscribeFeedback(subs, cmd, event)
+			},
+		},
+		[FeedbackId.SoloMonitor]: {
+			type: 'boolean',
+			name: 'Solo Monitor Output',
+			description: 'Active when the solo monitor output matches the selected destination.',
+			options: [
+				...GetDropdownWithVariables('Output', 'out', [
+					getIdLabelPair('SPK', 'Speaker'),
+					getIdLabelPair('PH', 'Phones'),
+					getIdLabelPair('PH+SPK', 'Both'),
+				]),
+			],
+			defaultStyle: { bgcolor: combineRgb(0, 160, 220), color: combineRgb(0, 0, 0) },
+			callback: (event: CompanionFeedbackInfo): boolean => {
+				const val = ActionUtil.getStringWithVariables(event, 'out')
+				const current = StateUtil.getStringFromState(ConfigurationCommands.SoloMonitor(), state)
+				return current === val
+			},
+			subscribe: (event): void => {
+				subscribeFeedback(ensureLoaded, subs, ConfigurationCommands.SoloMonitor(), event)
+			},
+			unsubscribe: (event: CompanionFeedbackInfo): void => {
+				unsubscribeFeedback(subs, ConfigurationCommands.SoloMonitor(), event)
 			},
 		},
 		[FeedbackId.Talkback]: {

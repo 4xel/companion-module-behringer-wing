@@ -134,6 +134,7 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Configuration | Set Monitor Source Level | Set the source level of a monitor channel (-144 to 10 dB). |
 | Configuration | Set Solo Dim | Set or toggle the dim state of the solo output. |
 | Configuration | Set Solo LR Swap | Set the left-right channel swap of the solo channel. |
+| Configuration | Set Solo Monitor Output | Set the monitor output destination for the solo signal: Speaker, Phones, or Both. |
 | Configuration | Set Solo Mono | Set or toggle the mono state of the solo output. |
 | Configuration | Set Solo Mute | Set or toggle the mute state of the solo output. |
 | Configuration | Talkback Assign | Enable, disable or toggle the assignment of a talkback to a bus, matrix or main. |
@@ -142,11 +143,6 @@ If you continue to experience issues, you can open an issue on the [GitHub repos
 | Configuration | Talkback Mode | Set the mode of a talkback channel. |
 | Configuration | Talkback Monitor Dim | Set the the monitor dim amount of a talkback channel. |
 | Configuration | Talkback On | Enable or disable the on state of a talkback. |
-| Control | DAW: Fast Forward | Send fast-forward command to the connected DAW. |
-| Control | DAW: Play | Send play command to the connected DAW. |
-| Control | DAW: Record | Send record command to the connected DAW. |
-| Control | DAW: Rewind | Send rewind command to the connected DAW. |
-| Control | DAW: Stop | Send stop command to the connected DAW. |
 | Control | Recall Scene by Number | Recall scene in a show by its number |
 | Control | Send Library Action | Trigger a library action (Select and navigate scenes in a show) |
 | Control | Set GPIO Mode | Configure the mode of a GPIO |

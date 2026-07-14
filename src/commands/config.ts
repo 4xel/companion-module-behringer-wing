@@ -206,6 +206,10 @@ export namespace ConfigurationCommands {
 		return `${ConfigNode()}/solo`
 	}
 
+	export function SoloMonitor(): string {
+		return `${SoloNode()}/mon`
+	}
+
 	export function SoloMute(): string {
 		return `${SoloNode()}/mute`
 	}

@@ -30,6 +30,7 @@ export enum ConfigActions {
 	SetSoloDim = 'set-solo-dim',
 	SetSoloMono = 'set-solo-mono',
 	SetSoloLRSwap = 'set-solo-swap',
+	SetSoloMonitor = 'set-solo-monitor',
 
 	// Monitor
 	SetMonitorLevel = 'set-monitor-level',
@@ -101,6 +102,21 @@ export function createConfigurationActions(self: InstanceBaseExt<WingConfig>): C
 				const cmd = ConfigurationCommands.SoloLRSwap()
 				const val = ActionUtil.getNumberWithVariables(event, 'swap')
 				await send(cmd, val)
+			},
+		},
+		[ConfigActions.SetSoloMonitor]: {
+			name: 'Set Solo Monitor Output',
+			description: 'Set the monitor output destination for the solo signal: Speaker, Phones, or Both.',
+			options: [
+				...GetDropdownWithVariables('Output', 'out', [
+					getIdLabelPair('SPK', 'Speaker'),
+					getIdLabelPair('PH', 'Phones'),
+					getIdLabelPair('PH+SPK', 'Both'),
+				]),
+			],
+			callback: async (event) => {
+				const val = ActionUtil.getStringWithVariables(event, 'out')
+				await send(ConfigurationCommands.SoloMonitor(), val)
 			},
 		},
 		[ConfigActions.SetMonitorLevel]:

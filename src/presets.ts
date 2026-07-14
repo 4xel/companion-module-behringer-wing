@@ -11,6 +11,7 @@ import { CardsActionId } from './actions/cards.js'
 import { UsbPlayerActionId } from './actions/usbplayer.js'
 import { TalkbackSwitcherActionId } from './actions/talkback.js'
 import { GAIN_QUEUE_SLOTS } from './handlers/gain-compensation-handler.js'
+import { BusActions } from './actions/bus.js'
 
 export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPresetDefinitions {
 	const model = _instance.model
@@ -69,7 +70,12 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`bus${i}-cut`] = getFaderPreset('bus', i, -144, 'Cut')
 		presets[`bus${i}-fader-display`] = getFaderDisplayPreset('bus', i)
 		presets[`bus${i}-colour-mute`] = getColourMutePreset('bus', i)
+		presets[`bus${i}-master-remaster-plus1`] = getRemasterPreset('bus', i, 1)
+		presets[`bus${i}-master-remaster-minus1`] = getRemasterPreset('bus', i, -1)
 	}
+
+	presets['selected-remaster-plus1'] = getRemasterSelectedPreset(1)
+	presets['selected-remaster-minus1'] = getRemasterSelectedPreset(-1)
 
 	for (let i = 1; i <= model.matrices; i++) {
 		presets[`mtx${i}-mute-button`] = getMutePreset('mtx', i)
@@ -78,6 +84,8 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`mtx${i}-nominal`] = getFaderPreset('mtx', i, 0, 'Nominal')
 		presets[`mtx${i}-cut`] = getFaderPreset('mtx', i, -144, 'Cut')
 		presets[`mtx${i}-fader-display`] = getFaderDisplayPreset('mtx', i)
+		presets[`mtx${i}-remaster-plus1`] = getRemasterPreset('mtx', i, 1)
+		presets[`mtx${i}-remaster-minus1`] = getRemasterPreset('mtx', i, -1)
 	}
 
 	for (let i = 1; i <= model.mains; i++) {
@@ -87,6 +95,8 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		presets[`main${i}-nominal`] = getFaderPreset('main', i, 0, 'Nominal')
 		presets[`main${i}-cut`] = getFaderPreset('main', i, -144, 'Cut')
 		presets[`main${i}-fader-display`] = getFaderDisplayPreset('main', i)
+		presets[`main${i}-remaster-plus1`] = getRemasterPreset('main', i, 1)
+		presets[`main${i}-remaster-minus1`] = getRemasterPreset('main', i, -1)
 	}
 
 	for (let i = 1; i <= model.dcas; i++) {
@@ -145,6 +155,8 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 		const safeKey = destId.replace(/\//g, '-').replace(/^-/, '')
 		presets[`tbsw-a-${safeKey}`] = getTbSwExclusivePreset('A', destId, destName, combineRgb(180, 80, 0))
 		presets[`tbsw-b-${safeKey}`] = getTbSwExclusivePreset('B', destId, destName, combineRgb(160, 0, 0))
+		presets[`tbsw-a-add-${safeKey}`] = getTbSwAdditivePreset('A', destId, destName, combineRgb(180, 80, 0))
+		presets[`tbsw-b-add-${safeKey}`] = getTbSwAdditivePreset('B', destId, destName, combineRgb(160, 0, 0))
 	}
 
 	for (let i = 1; i <= model.busses; i++) {
@@ -158,6 +170,9 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 	presets['stat-aes50-b'] = getAes50StatusPreset('B')
 	presets['stat-aes50-c'] = getAes50StatusPreset('C')
 	presets['stat-solo-clear'] = getSoloClearPreset()
+	presets['solo-mon-spk'] = getSoloMonitorPreset('SPK', 'Speaker')
+	presets['solo-mon-ph'] = getSoloMonitorPreset('PH', 'Phones')
+	presets['solo-mon-both'] = getSoloMonitorPreset('PH+SPK', 'Both')
 
 	presets['scene-prev'] = getSceneStepPreset('PREV')
 	presets['scene-next'] = getSceneStepPreset('NEXT')
@@ -245,13 +260,6 @@ export function GetPresets(_instance: InstanceBaseExt<WingConfig>): CompanionPre
 	for (let i = 1; i <= Math.min(model.channels, 8); i++) {
 		presets[`ch${i}-headamp-gain`] = getHeadampGainPreset(i)
 	}
-
-	// DAW transport
-	presets['daw-play'] = getDawPreset(OtherActionId.DawPlay, '▶ DAW\nPlay', combineRgb(0, 140, 0))
-	presets['daw-stop'] = getDawPreset(OtherActionId.DawStop, '⏹ DAW\nStop', combineRgb(60, 60, 60))
-	presets['daw-record'] = getDawPreset(OtherActionId.DawRecord, '⏺ DAW\nRec', combineRgb(180, 0, 0))
-	presets['daw-rewind'] = getDawPreset(OtherActionId.DawRewind, '⏮ DAW\nRwd', combineRgb(0, 60, 120))
-	presets['daw-ff'] = getDawPreset(OtherActionId.DawFastForward, '⏭ DAW\nFF', combineRgb(0, 60, 120))
 
 	presets[`lights-bright`] = getLightPresetBright()
 	presets[`lights-dark`] = getLightPresetDark()
@@ -738,17 +746,6 @@ function getGainCompTrimKnobPreset(ch: number): CompanionButtonPresetDefinition 
 				style: { bgcolor: combineRgb(180, 100, 0), color: combineRgb(0, 0, 0) },
 			},
 		],
-	}
-}
-
-function getDawPreset(actionId: OtherActionId, label: string, bgcolor: number): CompanionButtonPresetDefinition {
-	return {
-		name: label.replace('\n', ' '),
-		category: 'DAW',
-		type: 'button',
-		style: { text: label, size: 'auto', color: combineRgb(255, 255, 255), bgcolor },
-		steps: [{ down: [{ actionId, options: {} }], up: [] }],
-		feedbacks: [],
 	}
 }
 
@@ -1814,6 +1811,39 @@ function getSoloClearPreset(): CompanionButtonPresetDefinition {
 	}
 }
 
+const SOLO_MON_ICON: Record<string, string> = {
+	SPK: '🔊',
+	PH: '🎧',
+	'PH+SPK': '🔊\n🎧',
+}
+
+function getSoloMonitorPreset(out: 'SPK' | 'PH' | 'PH+SPK', label: string): CompanionButtonPresetDefinition {
+	return {
+		name: `Solo Monitor - ${label}`,
+		category: 'Monitor',
+		type: 'button',
+		style: {
+			text: SOLO_MON_ICON[out] ?? label,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(30, 30, 30),
+		},
+		steps: [
+			{
+				down: [{ actionId: ConfigActions.SetSoloMonitor, options: { out, out_use_variables: false } }],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.SoloMonitor,
+				options: { out, out_use_variables: false },
+				style: { bgcolor: combineRgb(0, 160, 220), color: combineRgb(0, 0, 0) },
+			},
+		],
+	}
+}
+
 ////////////////////////////////////////////////////////////////
 // Scene presets
 ////////////////////////////////////////////////////////////////
@@ -2159,6 +2189,79 @@ function getSendLevelKnobPreset(ch: number, bus: number): CompanionButtonPresetD
 	}
 }
 
+// ─── Bus / Main Remaster presets ──────────────────────────────────────────────
+
+const REMASTER_TYPE: Record<string, { prefix: string; label: string }> = {
+	bus: { prefix: 'B', label: 'Bus' },
+	main: { prefix: 'M', label: 'Main' },
+	mtx: { prefix: 'MX', label: 'Matrix' },
+}
+
+function getRemasterPreset(type: 'bus' | 'main' | 'mtx', num: number, delta: number): CompanionButtonPresetDefinition {
+	const sign = delta >= 0 ? '+' : ''
+	const { prefix, label } = REMASTER_TYPE[type]
+	return {
+		name: `${label} ${num} Remaster ${sign}${delta}dB`,
+		category: 'Bus Remaster',
+		type: 'button',
+		style: {
+			text: `${prefix}${num}\\n${sign}${delta}dB`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: delta >= 0 ? combineRgb(0, 80, 40) : combineRgb(80, 40, 0),
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: BusActions.BusMasterRemaster,
+						options: {
+							bus_use_variables: false,
+							bus: `/${type}/${num}`,
+							delta: String(delta),
+							delta_use_variables: false,
+						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+}
+
+function getRemasterSelectedPreset(delta: number): CompanionButtonPresetDefinition {
+	const sign = delta >= 0 ? '+' : ''
+	return {
+		name: `Selected Strip Remaster ${sign}${delta}dB`,
+		category: 'Bus Remaster',
+		type: 'button',
+		style: {
+			text: `SEL\\n${sign}${delta}dB`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: delta >= 0 ? combineRgb(0, 80, 40) : combineRgb(80, 40, 0),
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: BusActions.BusMasterRemaster,
+						options: {
+							bus_use_variables: true,
+							bus_variables: '$(wing:sel_string)',
+							delta: String(delta),
+							delta_use_variables: false,
+						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [],
+	}
+}
+
 // ─── Talkback Switcher presets ────────────────────────────────────────────────
 
 function getTbSwExclusivePreset(
@@ -2184,12 +2287,55 @@ function getTbSwExclusivePreset(
 						actionId: TalkbackSwitcherActionId.ExclusiveDest,
 						options: {
 							tb,
-							dest,
+							dests: [dest],
 							open_mic: '0',
 							tb_use_variables: false,
-							dest_use_variables: false,
 							open_mic_use_variables: false,
 						},
+					},
+				],
+				up: [],
+			},
+		],
+		feedbacks: [
+			{
+				feedbackId: FeedbackId.TalkbackAssign,
+				options: {
+					tb,
+					tb_use_variables: false,
+					dest,
+					dest_use_variables: false,
+					assign: '1',
+					assign_use_variables: false,
+				},
+				style: { bgcolor: activeBg, color: combineRgb(255, 255, 255) },
+			},
+		],
+	}
+}
+
+function getTbSwAdditivePreset(
+	tb: 'A' | 'B',
+	dest: string,
+	name: string,
+	activeBg: number,
+): CompanionButtonPresetDefinition {
+	return {
+		name: `TB ${tb} + ${name}`,
+		category: 'Talkback Switcher',
+		type: 'button',
+		style: {
+			text: `${tb}+${name}`,
+			size: 'auto',
+			color: combineRgb(255, 255, 255),
+			bgcolor: combineRgb(30, 30, 30),
+		},
+		steps: [
+			{
+				down: [
+					{
+						actionId: TalkbackSwitcherActionId.AdditiveDest,
+						options: { tb, tb_use_variables: false, dest, dest_use_variables: false },
 					},
 				],
 				up: [],

@@ -25,12 +25,6 @@ export enum OtherActionId {
 	SetSOF = 'set-sof',
 	SetSelected = 'set-selected',
 	SetLightIntensities = 'set-light-intensities',
-	// DAW transport
-	DawPlay = 'daw-play',
-	DawStop = 'daw-stop',
-	DawRecord = 'daw-record',
-	DawRewind = 'daw-rewind',
-	DawFastForward = 'daw-fast-forward',
 	TriggerUserControl = 'trigger-user-control',
 }
 
@@ -365,51 +359,6 @@ export function createControlActions(self: InstanceBaseExt<WingConfig>): Compani
 				ensureLoaded(ControlCommands.UnderConsoleLightIntensity())
 				ensureLoaded(ControlCommands.PatchPanelLightIntensity())
 				ensureLoaded(ControlCommands.LampLightIntensity())
-			},
-		},
-
-		////////////////////////////////////////////////////////////////
-		// DAW transport
-		////////////////////////////////////////////////////////////////
-
-		[OtherActionId.DawPlay]: {
-			name: 'DAW: Play',
-			description: 'Send play command to the connected DAW.',
-			options: [],
-			callback: async () => {
-				await send(ControlCommands.DawPlay(), 1)
-			},
-		},
-		[OtherActionId.DawStop]: {
-			name: 'DAW: Stop',
-			description: 'Send stop command to the connected DAW.',
-			options: [],
-			callback: async () => {
-				await send(ControlCommands.DawStop(), 1)
-			},
-		},
-		[OtherActionId.DawRecord]: {
-			name: 'DAW: Record',
-			description: 'Send record command to the connected DAW.',
-			options: [],
-			callback: async () => {
-				await send(ControlCommands.DawRecord(), 1)
-			},
-		},
-		[OtherActionId.DawRewind]: {
-			name: 'DAW: Rewind',
-			description: 'Send rewind command to the connected DAW.',
-			options: [],
-			callback: async () => {
-				await send(ControlCommands.DawRewind(), 1)
-			},
-		},
-		[OtherActionId.DawFastForward]: {
-			name: 'DAW: Fast Forward',
-			description: 'Send fast-forward command to the connected DAW.',
-			options: [],
-			callback: async () => {
-				await send(ControlCommands.DawFastForward(), 1)
 			},
 		},
 
